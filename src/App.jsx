@@ -46,7 +46,7 @@ export default function App() {
   }, [])
 
   return (
-    <div className={theme}>
+    <div className={theme} style={{ height: "100%" }}>
       {/* Public math homepage */}
       <Routes>
         <Route path="/" element={<MathHomepage />} />

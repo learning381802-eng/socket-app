@@ -56,10 +56,9 @@
   padding: 0;
 }
 
-html, body, #root {
-  height: 100%;
-  overflow: hidden;
-}
+/* Chat layout handles its own height/overflow */
+html, body { height: 100%; margin: 0; }
+#root { height: 100%; }
 
 body {
   font-family: 'DM Sans', sans-serif;
@@ -219,10 +218,11 @@ body {
 
 .math-site {
   min-height: 100vh;
+  height: auto;
   background: #fafaf8;
   color: #1a1a1a;
   font-family: 'DM Sans', sans-serif;
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
 }
 
@@ -650,5 +650,282 @@ body {
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+}
+
+/* ============================================================
+   ADMIN PANEL STYLES
+   ============================================================ */
+
+.admin-panel {
+  margin-bottom: 28px;
+  border: 1.5px solid #c8d8cc;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f8fdf9;
+}
+
+.admin-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #f0f7f3;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a472a;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.admin-toggle:hover {
+  background: #e8f4ec;
+}
+
+.admin-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: #1a472a;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.admin-body {
+  padding: 0;
+  border-top: 1.5px solid #c8d8cc;
+}
+
+.admin-tabs {
+  display: flex;
+  border-bottom: 1.5px solid #c8d8cc;
+}
+
+.admin-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.15s;
+}
+
+.admin-tab:hover {
+  background: #f0f7f3;
+  color: #1a472a;
+}
+
+.admin-tab.active {
+  color: #1a472a;
+  background: #fff;
+  border-bottom: 2px solid #1a472a;
+}
+
+.admin-section {
+  padding: 20px;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-input {
+  padding: 9px 12px;
+  border: 1.5px solid #dde8de;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  color: #111;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-input:focus {
+  border-color: #1a472a;
+}
+
+.admin-input-wide {
+  width: 100%;
+}
+
+.admin-hint-text {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.admin-inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-btn-primary {
+  padding: 9px 20px;
+  background: #1a472a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.admin-btn-primary:hover {
+  background: #15392a;
+}
+
+.admin-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d6a4f;
+}
+
+.admin-problems-list {
+  margin-top: 20px;
+  border: 1.5px solid #e0ece2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.admin-list-heading {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #888;
+  padding: 10px 16px;
+  background: #f7faf7;
+  border-bottom: 1px solid #e0ece2;
+  margin: 0;
+}
+
+.admin-problem-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #eef3ef;
+  transition: background 0.1s;
+}
+
+.admin-problem-row:last-child {
+  border-bottom: none;
+}
+
+.admin-problem-row:hover {
+  background: #f8fdf9;
+}
+
+.admin-problem-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-problem-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  truncate: ellipsis;
+}
+
+.admin-problem-meta {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.admin-role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-role-badge.owner {
+  background: #1a472a;
+  color: white;
+}
+
+.admin-role-badge.admin {
+  background: #d8f3dc;
+  color: #2d6a4f;
+}
+
+.admin-delete-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: #fee2e2;
+  color: #9b2226;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.admin-delete-btn:hover {
+  background: #fca5a5;
+}
+
+@media (max-width: 640px) {
+  .admin-row {
+    grid-template-columns: 1fr;
+  }
+  .admin-inline {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
