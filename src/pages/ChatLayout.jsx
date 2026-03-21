@@ -70,9 +70,10 @@ export default function ChatLayout() {
       <div className="flex-1 flex min-w-0 overflow-hidden">
         <Routes>
           <Route path="/" element={<WelcomePanel />} />
-          <Route path="/dm/:id" element={<MainPanel />} />
-          <Route path="/space/:id" element={<MainPanel />} />
-          <Route path="/group/:id" element={<MainPanel />} />
+          <Route path="/socket" element={<WelcomePanel />} />
+          <Route path="dm/:id" element={<MainPanel />} />
+          <Route path="space/:id" element={<MainPanel />} />
+          <Route path="group/:id" element={<MainPanel />} />
         </Routes>
       </div>
 

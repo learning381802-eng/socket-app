@@ -64,13 +64,13 @@ export default function NewChatModal() {
         }
         addConversation({ ...data, role: 'admin' })
         setActiveConversation({ ...data, role: 'admin' })
-        navigate(`/space/${data.id}`)
+        navigate(`/socket/space/${data.id}`)
       } else if (isNewChat && selected.length === 1) {
         const conv = await createDM(user.id, selected[0].id)
         if (conv) {
           addConversation(conv)
           setActiveConversation(conv)
-          navigate(`/dm/${conv.id}`)
+          navigate(`/socket/dm/${conv.id}`)
         }
       } else if (isNewGroup && selected.length >= 2) {
         const { data: conv } = await supabase
@@ -84,7 +84,7 @@ export default function NewChatModal() {
           ])
           addConversation({ ...conv, role: 'admin' })
           setActiveConversation({ ...conv, role: 'admin' })
-          navigate(`/group/${conv.id}`)
+          navigate(`/socket/group/${conv.id}`)
         }
       }
       setModal(null)

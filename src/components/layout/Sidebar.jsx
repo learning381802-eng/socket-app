@@ -30,7 +30,7 @@ export default function Sidebar() {
   const handleConvClick = (conv) => {
     setActiveConversation(conv)
     const prefix = conv.type === 'space' ? 'space' : conv.type === 'group' ? 'group' : 'dm'
-    navigate(`/${prefix}/${conv.id}`)
+    navigate(`/socket/${prefix}/${conv.id}`)
   }
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
@@ -106,7 +106,7 @@ export default function Sidebar() {
           icon={<Home size={15} />}
           label="Home"
           active={location.pathname === '/'}
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/socket')}
         />
       </div>
 

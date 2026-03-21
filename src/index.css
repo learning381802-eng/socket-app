@@ -212,3 +212,443 @@ body {
 [data-tooltip]:hover::after {
   opacity: 1;
 }
+
+/* ============================================================
+   MATH SITE STYLES
+   ============================================================ */
+
+.math-site {
+  min-height: 100vh;
+  background: #fafaf8;
+  color: #1a1a1a;
+  font-family: 'DM Sans', sans-serif;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Header */
+.math-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e8e8e4;
+}
+
+.math-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.math-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.math-logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a472a;
+  letter-spacing: -0.3px;
+}
+
+.math-nav {
+  display: flex;
+  gap: 28px;
+}
+
+.math-nav a {
+  font-size: 14px;
+  color: #555;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.math-nav a:hover {
+  color: #1a472a;
+}
+
+/* Hero */
+.math-hero {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 64px 24px 56px;
+  text-align: center;
+}
+
+.math-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 800;
+  color: #111;
+  line-height: 1.1;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.math-subtitle {
+  font-size: 18px;
+  color: #666;
+  max-width: 540px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+
+.math-stats {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin-top: 40px;
+}
+
+.math-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.math-stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a472a;
+}
+
+.math-stat-label {
+  font-size: 13px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+/* Main content */
+.math-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* Category filter */
+.category-filter {
+  padding: 48px 0 32px;
+}
+
+.section-heading {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 16px;
+  letter-spacing: -0.3px;
+}
+
+.category-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.category-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 99px;
+  border: 1.5px solid #e0e0d8;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.category-pill:hover {
+  border-color: #1a472a;
+  color: #1a472a;
+  background: #f0f7f3;
+}
+
+.category-pill.active {
+  background: #1a472a;
+  border-color: #1a472a;
+  color: #fff;
+}
+
+.category-icon {
+  font-size: 15px;
+  font-family: serif;
+}
+
+/* Problem feed */
+.problem-feed {
+  padding-top: 8px;
+}
+
+.problem-feed-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.problem-count {
+  font-size: 13px;
+  color: #999;
+  font-weight: 500;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* Math problem card */
+.math-card {
+  background: #fff;
+  border: 1.5px solid #e8e8e4;
+  border-radius: 16px;
+  padding: 24px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.math-card:hover {
+  border-color: #c8d8cc;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+.math-card.math-card-solved {
+  border-color: #2d6a4f;
+  background: #f8fdf9;
+}
+
+.math-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.math-card-meta {
+  display: flex;
+  gap: 8px;
+}
+
+.math-category-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: #eef2ee;
+  color: #2d6a4f;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.math-difficulty-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.math-solved-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2d6a4f;
+}
+
+.math-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 16px;
+  font-family: 'Syne', sans-serif;
+}
+
+.math-problem-display {
+  background: #f7f7f5;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  text-align: center;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ececea;
+}
+
+.math-block {
+  display: block;
+  font-size: 18px;
+}
+
+.math-inline {
+  font-size: 15px;
+}
+
+/* Hint */
+.math-hint-section {
+  margin-bottom: 14px;
+}
+
+.math-hint-btn {
+  font-size: 12px;
+  color: #888;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.math-hint-btn:hover {
+  color: #1a472a;
+}
+
+.math-hint-text {
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border-radius: 8px;
+  border-left: 3px solid #f59e0b;
+  line-height: 1.5;
+}
+
+/* Submission */
+.submission-box {
+  margin-top: 4px;
+}
+
+.submission-form {
+  display: flex;
+  gap: 8px;
+}
+
+.submission-input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1.5px solid #e0e0d8;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  background: #fafaf8;
+  color: #111;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.submission-input:focus {
+  border-color: #1a472a;
+  background: #fff;
+}
+
+.submission-btn {
+  padding: 9px 18px;
+  background: #1a472a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.15s;
+}
+
+.submission-btn:hover {
+  background: #15392a;
+}
+
+.submission-feedback {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.submission-feedback.correct {
+  color: #2d6a4f;
+  background: #d8f3dc;
+}
+
+.submission-feedback.incorrect {
+  color: #9b2226;
+  background: #fde8e8;
+}
+
+/* Footer */
+.math-footer {
+  background: #fff;
+  border-top: 1px solid #e8e8e4;
+  padding: 24px 0;
+}
+
+.math-footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.math-footer p {
+  font-size: 13px;
+  color: #999;
+}
+
+.math-footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.math-footer-links a {
+  font-size: 13px;
+  color: #999;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.math-footer-links a:hover {
+  color: #1a472a;
+}
+
+/* KaTeX overrides */
+.katex {
+  font-size: 1.1em !important;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .math-stats {
+    gap: 24px;
+  }
+  .problem-grid {
+    grid-template-columns: 1fr;
+  }
+  .math-nav {
+    display: none;
+  }
+  .math-footer-inner {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+}
