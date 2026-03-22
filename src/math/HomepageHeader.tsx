@@ -4,10 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import SecretLink from './SecretLink'
 import MathLoginModal from './MathLoginModal'
 import { useStore } from '../store'
+import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/supabase'
 
 export default function HomepageHeader() {
   const { user } = useStore()
+  const navigate = useNavigate()
   const [showLogin, setShowLogin] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
 
@@ -55,7 +57,13 @@ export default function HomepageHeader() {
                         transition={{ duration: 0.15 }}
                       >
                         <div className="math-dropdown-email">{user.email}</div>
-                        <div className="math-dropdown-divider" />
+                        <button
+                          className="math-dropdown-item"
+                          onClick={() => { navigate('/profile'); setShowUserMenu(false) }}
+                        >
+                          View Profile
+                        </button>
+                <div className="math-dropdown-divider" />
                         <button
                           className="math-dropdown-item math-dropdown-signout"
                           onClick={() => { signOut(); setShowUserMenu(false) }}

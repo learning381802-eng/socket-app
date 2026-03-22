@@ -6,6 +6,7 @@ import MathHomepage from './pages/MathHomepage'
 import StealthRouteGuard from './stealth/stealthRouteGuard'
 import { ModuleCore, StreamAuth } from './stealth/lazyLoader'
 import NotificationStack from './components/ui/NotificationStack'
+import ProfilePage from './profile/ProfilePage'
 
 function ChatLoader() {
   return (
@@ -77,6 +78,7 @@ export default function App() {
           }
         />
 
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
