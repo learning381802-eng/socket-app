@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Search, Users, Hash, Check, Plus } from 'lucide-react'
+import { X, Search, Users, Hash, Check, Plus, Mail, UserPlus } from 'lucide-react'
 import { useStore } from '../../store'
 import { searchUsers, createDM, createSpace, supabase } from '../../lib/supabase'
 import Avatar from '../ui/Avatar'
@@ -14,6 +14,7 @@ export default function NewChatModal() {
   const [selected, setSelected] = useState([])
   const [spaceName, setSpaceName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [searching, setSearching] = useState(false)
 
   const isNewChat = modal === 'new-chat'
   const isNewSpace = modal === 'new-space'
@@ -31,10 +32,28 @@ export default function NewChatModal() {
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return }
+    
     const t = setTimeout(async () => {
-      const { data } = await searchUsers(query)
-      setResults((data || []).filter((u) => u.id !== user?.id))
+      setSearching(true)
+      try {
+        // Try RPC function first, fall back to direct query
+        let { data, error } = await supabase.rpc('search_users_by_query', { search_query: query })
+        
+        if (error || !data) {
+          // Fallback to direct query
+          const result = await searchUsers(query)
+          data = result.data
+        }
+        
+        setResults((data || []).filter((u) => u.id !== user?.id))
+      } catch (err) {
+        console.error('Search error:', err)
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
     }, 300)
+    
     return () => clearTimeout(t)
   }, [query])
 
@@ -45,6 +64,48 @@ export default function NewChatModal() {
       setSelected((prev) =>
         prev.find((p) => p.id === u.id) ? prev.filter((p) => p.id !== u.id) : [...prev, u]
       )
+    }
+  }
+
+  // Handle creating a DM with an email address (even if user doesn't exist in DB)
+  const handleCreateWithInvite = async () => {
+    if (!user || !query.trim()) return
+    
+    // Check if query is an email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(query)) return
+    
+    setLoading(true)
+    try {
+      // Try to find user by email
+      const { data: existingUsers } = await supabase
+        .from('users')
+        .select('id, display_name, avatar_url, email, status')
+        .eq('email', query.trim().toLowerCase())
+        .single()
+      
+      if (existingUsers) {
+        // User exists, create DM
+        const conv = await createDM(user.id, existingUsers.id)
+        if (conv) {
+          addConversation(conv)
+          setActiveConversation(conv)
+          navigate(`/socket/dm/${conv.id}`)
+          setModal(null)
+        }
+      } else {
+        // User doesn't exist - show notification that we'll invite them
+        addNotification({
+          type: 'info',
+          message: `We'll invite ${query} when they sign up!`,
+        })
+        // For now, just close - in production you'd send an invite email
+        setModal(null)
+      }
+    } catch (err) {
+      addNotification({ type: 'error', message: err.message || 'Failed to create conversation' })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -99,6 +160,10 @@ export default function NewChatModal() {
     (isNewSpace && spaceName.trim().length > 0) ||
     (isNewChat && selected.length === 1) ||
     (isNewGroup && selected.length >= 2)
+
+  // Check if query looks like an email for invite option
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const isEmailQuery = isNewChat && emailRegex.test(query.trim()) && results.length === 0
 
   const title = isNewSpace ? 'Create a Space' : isNewGroup ? 'New Group Message' : 'New Message'
   const placeholder = isNewSpace ? 'Search people to invite...' : 'Search by name or email...'
@@ -171,7 +236,7 @@ export default function NewChatModal() {
                   )}
                   <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
                     style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                    <Search size={15} style={{ color: 'var(--text-muted)' }} />
+                    <Search size={15} style={{ color: searching ? 'var(--accent)' : 'var(--text-muted)' }} />
                     <input
                       autoFocus={!isNewSpace}
                       value={query}
@@ -180,6 +245,9 @@ export default function NewChatModal() {
                       className="flex-1 bg-transparent text-sm outline-none"
                       style={{ color: 'var(--text-primary)' }}
                     />
+                    {searching && (
+                      <div className="w-4 h-4 border-2 border-var(--accent)/30 border-t-var(--accent) rounded-full animate-spin" />
+                    )}
                   </div>
                 </div>
 
@@ -238,6 +306,42 @@ export default function NewChatModal() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* Email invite option */}
+                {isEmailQuery && (
+                  <motion.button
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={handleCreateWithInvite}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-2xl transition-colors"
+                    style={{ background: 'var(--accent-subtle)', border: '1px dashed var(--accent)' }}
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ background: 'var(--accent)', color: 'white' }}>
+                      <Mail size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+                        Invite {query}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        They'll be able to chat once they sign up
+                      </p>
+                    </div>
+                    <UserPlus size={18} style={{ color: 'var(--accent)' }} />
+                  </motion.button>
+                )}
+
+                {/* No results message */}
+                {query.trim() && results.length === 0 && !isEmailQuery && !searching && (
+                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                    <Users size={32} className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No users found matching "{query}"</p>
+                    {emailRegex.test(query) && (
+                      <p className="text-xs mt-2">Try entering the email to send an invite</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Action button */}
                 <motion.button

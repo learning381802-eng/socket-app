@@ -108,10 +108,11 @@ export const createSpace = async (name, creatorId) => {
 }
 
 export const searchUsers = async (query) => {
+  // Search by both display_name and email
   const { data, error } = await supabase
     .from('users')
     .select('id, display_name, avatar_url, email, status')
-    .ilike('display_name', `%${query}%`)
+    .or(`display_name.ilike.%${query}%,email.ilike.%${query}%`)
     .limit(10)
   return { data, error }
 }

@@ -4,6 +4,11 @@ import NewChatModal from '../chat/NewChatModal'
 // Route modal string to component
 export default function Modal() {
   const { modal } = useStore()
-  // NewChatModal handles its own open state
+  
+  // Render the appropriate modal based on state
+  if (modal === 'new-chat' || modal === 'new-space' || modal === 'new-group') {
+    return <NewChatModal />
+  }
+  
   return null
 }

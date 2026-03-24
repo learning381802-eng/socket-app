@@ -34,18 +34,32 @@ export default function SearchOverlay() {
 
   const doSearch = async (q) => {
     setLoading(true)
-    const [msgRes, userRes] = await Promise.all([
-      searchMessages(q, user?.id),
-      searchUsers(q),
-    ])
-    const convMatches = conversations.filter((c) =>
-      c.name?.toLowerCase().includes(q.toLowerCase())
-    )
-    setResults({
-      messages: msgRes.data || [],
-      users: (userRes.data || []).filter((u) => u.id !== user?.id),
-      conversations: convMatches,
-    })
+    try {
+      // Use RPC function for better user search
+      let { data: userData } = await supabase.rpc('search_users_by_query', { search_query: q })
+      if (!userData) {
+        // Fallback to direct query
+        const userRes = await searchUsers(q)
+        userData = userRes.data
+      }
+      
+      const [msgRes] = await Promise.all([
+        searchMessages(q, user?.id),
+      ])
+      
+      const convMatches = conversations.filter((c) =>
+        c.name?.toLowerCase().includes(q.toLowerCase())
+      )
+      
+      setResults({
+        messages: msgRes.data || [],
+        users: (userData || []).filter((u) => u.id !== user?.id),
+        conversations: convMatches,
+      })
+    } catch (err) {
+      console.error('Search error:', err)
+      setResults({ messages: [], users: [], conversations: [] })
+    }
     setLoading(false)
   }
 

@@ -277,3 +277,26 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.memberships;
 -- After creating your first account, you can run:
 -- INSERT INTO public.conversations (type, name) VALUES ('space', 'general');
 -- Then add yourself as admin member.
+
+-- ============================================================
+-- ADDITIONAL HELPER FUNCTIONS
+-- ============================================================
+
+-- Enhanced user search function (searches by email and display_name)
+CREATE OR REPLACE FUNCTION public.search_users_by_query(search_query TEXT)
+RETURNS TABLE (
+  id UUID,
+  display_name TEXT,
+  avatar_url TEXT,
+  email TEXT,
+  status TEXT
+) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN QUERY
+  SELECT u.id, u.display_name, u.avatar_url, u.email, u.status
+  FROM public.users u
+  WHERE u.display_name ILIKE '%' || search_query || '%'
+     OR u.email ILIKE '%' || search_query || '%'
+  LIMIT 10;
+END;
+$$;
