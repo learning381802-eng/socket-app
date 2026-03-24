@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   --bg-primary: #f8f9fc;
@@ -61,11 +61,18 @@ html, body { height: 100%; margin: 0; }
 #root { height: 100%; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   transition: background 0.2s, color 0.2s;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Display/headings font */
+.font-display {
+  font-family: 'IBM Plex Sans Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 /* Custom scrollbar */
@@ -2816,4 +2823,41 @@ body {
     flex: 1;
     justify-content: center;
   }
+}
+
+/* ============================================================
+   SIDEBAR COLLAPSED STATE
+   ============================================================ */
+
+.sidebar-collapsed {
+  width: 64px !important;
+}
+
+.sidebar-collapsed .sidebar-expanded-content {
+  display: none !important;
+}
+
+.sidebar-toggle-btn {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  z-index: 10;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--accent);
+  border-color: var(--accent);
 }

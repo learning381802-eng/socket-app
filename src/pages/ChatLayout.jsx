@@ -8,6 +8,7 @@ import WelcomePanel from '../components/chat/WelcomePanel'
 import RightPanel from '../components/layout/RightPanel'
 import SearchOverlay from '../components/ui/SearchOverlay'
 import Modal from '../components/ui/Modal'
+import NotificationStack from '../components/ui/NotificationStack'
 
 export default function ChatLayout() {
   const {
@@ -83,6 +84,9 @@ export default function ChatLayout() {
       {/* Overlays */}
       {searchOpen && <SearchOverlay />}
       {modal && <Modal />}
+      
+      {/* Notifications */}
+      <NotificationStack />
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, MessageSquare, Hash, Search, Plus, ChevronDown,
   ChevronRight, Settings, Moon, Sun, Zap, LogOut, User,
-  Users, Bell, MoreHorizontal, Circle
+  Users, Bell, MoreHorizontal, Circle, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
 import { useStore } from '../../store'
 import { signOut, searchUsers } from '../../lib/supabase'
@@ -16,8 +16,8 @@ export default function Sidebar() {
   const location = useLocation()
   const {
     user, conversations, activeConversation, setActiveConversation,
-    theme, toggleTheme, sidebarCollapsed, setModal,
-    setSearchOpen, onlineUsers,
+    theme, toggleTheme, sidebarCollapsed, setSidebarCollapsed, setModal,
+    setSearchOpen, onlineUsers, setRightPanelOpen,
   } = useStore()
 
   const [dmExpanded, setDmExpanded] = useState(true)
@@ -39,79 +39,120 @@ export default function Sidebar() {
   const openNewChat = () => setModal('new-chat')
   const openNewSpace = () => setModal('new-space')
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed)
+  }
+
+  const isCollapsed = sidebarCollapsed
+
   return (
     <motion.div
-      className="flex flex-col h-full shrink-0 overflow-hidden select-none"
-      style={{ width: 260, background: 'var(--sidebar-bg)', borderRight: '1px solid rgba(255,255,255,0.04)' }}
+      className={`flex flex-col h-full shrink-0 overflow-hidden select-none relative transition-all duration-300 ${isCollapsed ? 'sidebar-collapsed' : ''}`}
+      style={{ 
+        width: isCollapsed ? 64 : 260, 
+        background: 'var(--sidebar-bg)', 
+        borderRight: '1px solid rgba(255,255,255,0.04)',
+        overflow: isCollapsed ? 'hidden' : 'visible'
+      }}
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Toggle button */}
+      <button
+        onClick={toggleSidebar}
+        className="sidebar-toggle-btn"
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {isCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+      </button>
+
       {/* App header */}
       <div className="px-4 pt-5 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg badge-gradient flex items-center justify-center shadow-glow-sm">
             <Zap size={14} className="text-white" />
           </div>
-          <span className="font-display text-base font-bold" style={{ color: 'var(--sidebar-text)' }}>
-            Socket
-          </span>
+          {!isCollapsed && (
+            <span className="font-display text-base font-bold" style={{ color: 'var(--sidebar-text)' }}>
+              Socket
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          <SidebarIconBtn
-            icon={<Search size={15} />}
-            onClick={() => setSearchOpen(true)}
-            tooltip="Search"
-          />
-          <SidebarIconBtn
-            icon={theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            onClick={toggleTheme}
-            tooltip="Toggle theme"
-          />
-        </div>
+        {!isCollapsed && (
+          <div className="flex items-center gap-1">
+            <SidebarIconBtn
+              icon={<Search size={15} />}
+              onClick={() => setSearchOpen(true)}
+              tooltip="Search"
+            />
+            <SidebarIconBtn
+              icon={theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              onClick={toggleTheme}
+              tooltip="Toggle theme"
+            />
+          </div>
+        )}
       </div>
 
       {/* Search bar */}
-      <div className="px-3 mb-3">
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all"
-          style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: 'var(--sidebar-muted)',
-          }}
-        >
-          <Search size={13} />
-          <span>Search messages, people...</span>
-          <span className="ml-auto font-mono text-[10px] opacity-60">⌘K</span>
-        </button>
-      </div>
+      {!isCollapsed && (
+        <div className="px-3 mb-3">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: 'var(--sidebar-muted)',
+            }}
+          >
+            <Search size={13} />
+            <span>Search messages, people...</span>
+            <span className="ml-auto font-mono text-[10px] opacity-60">⌘K</span>
+          </button>
+        </div>
+      )}
 
       {/* New chat button */}
-      <div className="px-3 mb-4">
-        <button
-          onClick={openNewChat}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95"
-          style={{ background: 'var(--accent)', color: 'white' }}
-        >
-          <Plus size={15} />
-          New Chat
-        </button>
-      </div>
+      {!isCollapsed && (
+        <div className="px-3 mb-4">
+          <button
+            onClick={openNewChat}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95"
+            style={{ background: 'var(--accent)', color: 'white' }}
+          >
+            <Plus size={15} />
+            New Chat
+          </button>
+        </div>
+      )}
 
       {/* Nav */}
-      <div className="px-2 mb-2">
-        <NavItem
-          icon={<Home size={15} />}
-          label="Home"
-          active={location.pathname === '/'}
-          onClick={() => navigate('/socket')}
-        />
-      </div>
+      {!isCollapsed && (
+        <div className="px-2 mb-2">
+          <NavItem
+            icon={<Home size={15} />}
+            label="Home"
+            active={location.pathname === '/'}
+            onClick={() => navigate('/socket')}
+          />
+        </div>
+      )}
+
+      {isCollapsed && (
+        <div className="px-2 mb-2">
+          <NavItemIcon
+            icon={<Home size={18} />}
+            active={location.pathname === '/'}
+            onClick={() => navigate('/socket')}
+            tooltip="Home"
+          />
+        </div>
+      )}
 
       {/* Scroll area */}
-      <div className="flex-1 overflow-y-auto px-2 space-y-1 pb-4">
+      <div className="flex-1 overflow-y-auto px-2 space-y-1 pb-4 sidebar-expanded-content">
         {/* Direct Messages */}
         <SectionHeader
           label="Direct Messages"
@@ -187,27 +228,32 @@ export default function Sidebar() {
       </div>
 
       {/* User profile footer */}
-      <div className="p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className={`p-3 border-t ${isCollapsed ? 'px-2' : ''}`} style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="relative">
           <button
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="w-full flex items-center gap-3 p-2 rounded-xl transition-all"
+            onClick={() => isCollapsed ? setRightPanelOpen(true) : setShowUserMenu(!showUserMenu)}
+            className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
             style={{ '&:hover': { background: 'var(--sidebar-hover)' } }}
             onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            title={isCollapsed ? 'Profile' : ''}
           >
-            <div className="relative">
-              <Avatar name={displayName} size={32} />
+            <div className="relative shrink-0">
+              <Avatar name={displayName} size={isCollapsed ? 36 : 32} />
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2"
                 style={{ borderColor: 'var(--sidebar-bg)' }} />
             </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: 'var(--sidebar-text)' }}>
-                {displayName}
-              </p>
-              <p className="text-xs truncate" style={{ color: 'var(--sidebar-muted)' }}>Online</p>
-            </div>
-            <MoreHorizontal size={14} style={{ color: 'var(--sidebar-muted)' }} />
+            {!isCollapsed && (
+              <>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--sidebar-text)' }}>
+                    {displayName}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: 'var(--sidebar-muted)' }}>Online</p>
+                </div>
+                <MoreHorizontal size={14} style={{ color: 'var(--sidebar-muted)' }} />
+              </>
+            )}
           </button>
 
           <AnimatePresence>
@@ -220,9 +266,17 @@ export default function Sidebar() {
                 className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl shadow-panel overflow-hidden py-1"
                 style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
               >
-                <UserMenuItem icon={<User size={14} />} label="Profile" />
+                <UserMenuItem 
+                  icon={<User size={14} />} 
+                  label="Profile" 
+                  onClick={() => { setShowUserMenu(false); navigate('/profile') }}
+                />
+                <UserMenuItem 
+                  icon={<Settings size={14} />} 
+                  label="Settings" 
+                  onClick={() => { setShowUserMenu(false); setModal('settings') }}
+                />
                 <UserMenuItem icon={<Bell size={14} />} label="Notifications" />
-                <UserMenuItem icon={<Settings size={14} />} label="Settings" />
                 <div className="my-1 h-px mx-2" style={{ background: 'var(--border)' }} />
                 <UserMenuItem
                   icon={<LogOut size={14} />}
@@ -256,6 +310,24 @@ function NavItem({ icon, label, active, onClick }) {
     >
       {icon}
       {label}
+    </button>
+  )
+}
+
+function NavItemIcon({ icon, active, onClick, tooltip }) {
+  return (
+    <button
+      onClick={onClick}
+      data-tooltip={tooltip}
+      className="w-full flex items-center justify-center p-3 rounded-xl text-sm font-medium transition-all"
+      style={{
+        background: active ? 'var(--sidebar-active)' : 'transparent',
+        color: active ? 'var(--accent)' : 'var(--sidebar-muted)',
+      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--sidebar-hover)' }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent' }}
+    >
+      {icon}
     </button>
   )
 }

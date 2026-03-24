@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 const COLORS = [
   ['#6173f3', '#e0e9ff'],
   ['#8b5cf6', '#ede9fe'],
@@ -51,5 +53,3 @@ export default function Avatar({ name, src, size = 32 }) {
     </div>
   )
 }
-
-import { useState } from 'react'
