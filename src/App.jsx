@@ -7,6 +7,7 @@ import StealthRouteGuard from './stealth/stealthRouteGuard'
 import { ModuleCore, StreamAuth } from './stealth/lazyLoader'
 import NotificationStack from './components/ui/NotificationStack'
 import ProfilePage from './profile/ProfilePage'
+import DiscoverPage from './pages/DiscoverPage'
 
 function ChatLoader() {
   return (
@@ -79,6 +80,7 @@ export default function App() {
         />
 
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/discover" element={<DiscoverPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

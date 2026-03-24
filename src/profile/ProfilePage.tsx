@@ -1,15 +1,17 @@
-// ProfilePage.tsx — Main profile page
+// ProfilePage.tsx — Modern redesign with clean layout
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import ProfileHeader from './ProfileHeader'
-import InfoCard from './InfoCard'
-import ActivityList from './ActivityList'
 import ProfileTabs, { TabId } from './ProfileTabs'
-import StatsPanel from './StatsPanel'
-import ProblemsTab from './ProblemsTab'
 import EditProfileModal from './EditProfileModal'
 import { useStore } from '../store'
+
+// Inline the InfoCard and ActivityList for simplicity
+import InfoCard from './InfoCard'
+import ActivityList from './ActivityList'
+import StatsPanel from './StatsPanel'
+import ProblemsTab from './ProblemsTab'
 
 export default function ProfilePage() {
   const { user } = useStore()
@@ -56,14 +58,18 @@ export default function ProfilePage() {
 
       {/* Page content */}
       <div className="pp-content">
-        {/* Left column */}
-        <div className="pp-left">
+        {/* Main column - Profile Header + Bio + Stats */}
+        <div className="pp-main-col">
           <ProfileHeader onEditProfile={() => setEditOpen(true)} />
-          <InfoCard />
+          
+          {/* Stats cards */}
+          <div className="pp-stats-section">
+            <InfoCard />
+          </div>
         </div>
 
-        {/* Right column */}
-        <div className="pp-right">
+        {/* Activity/Stats panel */}
+        <div className="pp-side-col">
           <div className="pp-card">
             <ProfileTabs active={tab} onChange={setTab} />
             <AnimatePresence mode="wait">
