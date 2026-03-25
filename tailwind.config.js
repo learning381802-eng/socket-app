@@ -8,6 +8,7 @@ export default {
         sans: ['DM Sans', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
         display: ['Syne', 'sans-serif'],
+        math: ['Space Grotesk', 'sans-serif'],
       },
       colors: {
         socket: {

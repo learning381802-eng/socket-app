@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Google+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Google+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
   /* Parchment-like light theme - Google Chat inspired */
@@ -245,7 +245,7 @@ body {
   height: auto;
   background: #fffffa;
   color: #191921;
-  font-family: 'IBM Plex Sans', sans-serif;
+  font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
   overflow-y: visible;
   overflow-x: hidden;
 }
@@ -305,13 +305,13 @@ body {
 }
 
 .math-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', 'Syne', sans-serif;
   font-size: clamp(36px, 5vw, 58px);
-  font-weight: 800;
+  font-weight: 700;
   color: #111;
   line-height: 1.1;
   margin-bottom: 20px;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
 }
 
 .math-subtitle {
@@ -320,6 +320,8 @@ body {
   max-width: 540px;
   margin: 0 auto 40px;
   line-height: 1.6;
+  font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  font-weight: 400;
 }
 
 .math-stats {
@@ -337,9 +339,9 @@ body {
 }
 
 .math-stat-num {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', 'Syne', sans-serif;
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 700;
   color: #1a472a;
 }
 
@@ -349,6 +351,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   font-weight: 600;
+  font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
 }
 
 /* Main content */
@@ -364,7 +367,7 @@ body {
 }
 
 .section-heading {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', 'Syne', sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: #111;
@@ -391,7 +394,7 @@ body {
   color: #555;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
 }
 
 .category-pill:hover {
@@ -497,7 +500,7 @@ body {
   font-weight: 700;
   color: #111;
   margin-bottom: 16px;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', 'Syne', sans-serif;
 }
 
 .math-problem-display {
@@ -534,7 +537,7 @@ body {
   border: none;
   cursor: pointer;
   padding: 0;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   font-weight: 500;
   transition: color 0.15s;
 }
@@ -591,7 +594,7 @@ body {
   padding: 10px 14px;
   border: none;
   font-size: 14px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   background: transparent;
   color: #111;
   outline: none;
@@ -611,7 +614,7 @@ body {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   transition: background 0.15s, transform 0.1s;
   white-space: nowrap;
   flex-shrink: 0;
@@ -728,7 +731,7 @@ body {
   font-weight: 700;
   color: #1a472a;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   text-align: left;
   transition: background 0.15s;
 }
@@ -768,7 +771,7 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   transition: all 0.15s;
 }
 
@@ -818,7 +821,7 @@ body {
   border: 1.5px solid #dde8de;
   border-radius: 10px;
   font-size: 14px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   background: #fff;
   color: #111;
   outline: none;
@@ -860,7 +863,7 @@ body {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   transition: background 0.15s;
   white-space: nowrap;
 }
@@ -997,7 +1000,7 @@ body {
   display: flex; flex-direction: column; gap: 16px;
   background: #fff; border: 2px solid #e8e8e4; border-radius: 20px;
   padding: 28px 24px; cursor: pointer; text-align: left;
-  transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s; font-family: 'Space Grotesk', 'DM Sans', sans-serif;
 }
 .forge-card:hover { border-color: #1a472a; box-shadow: 0 8px 28px rgba(26,71,42,0.12); transform: translateY(-2px); }
 .theoria-card:hover { border-color: #185fa5; box-shadow: 0 8px 28px rgba(24,95,165,0.12); transform: translateY(-2px); }
