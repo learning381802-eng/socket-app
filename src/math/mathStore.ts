@@ -120,7 +120,7 @@ export const useMathStore = create<MathStore>((set, get) => ({
   recordAnswer: (trainer, problemId, correct, difficulty) => {
     const key = trainer === 'mathforge' ? 'forgeStats' : 'theoriaStats'
     const storageKey = trainer === 'mathforge' ? FORGE_STATS_KEY : THEORIA_STATS_KEY
-    set(s => {
+    set((s) => {
       const prev = s[key]
       let xp = prev.xp + (correct ? XP_PER_CORRECT[difficulty] : 0)
       let level = prev.level
@@ -133,6 +133,9 @@ export const useMathStore = create<MathStore>((set, get) => ({
         streak: correct ? prev.streak + 1 : 0,
         totalAnswered: prev.totalAnswered + 1,
         correct: prev.correct + (correct ? 1 : 0),
+        seenIds: prev.seenIds.includes(problemId)
+          ? prev.seenIds
+          : [...prev.seenIds, problemId],
         allTimeSeenIds: prev.allTimeSeenIds.includes(problemId)
           ? prev.allTimeSeenIds
           : [...prev.allTimeSeenIds, problemId],

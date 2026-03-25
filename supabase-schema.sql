@@ -220,6 +220,7 @@ CREATE POLICY "Users can leave conversations"
   USING (user_id = auth.uid());
 
 -- Messages: only members of a conversation can see/send messages
+-- SELECT: Members can view messages in their conversations
 CREATE POLICY "Members can view messages in their conversations"
   ON public.messages FOR SELECT TO authenticated
   USING (
@@ -229,6 +230,7 @@ CREATE POLICY "Members can view messages in their conversations"
     )
   );
 
+-- INSERT: Members can send messages to their conversations
 CREATE POLICY "Members can send messages"
   ON public.messages FOR INSERT TO authenticated
   WITH CHECK (
@@ -239,10 +241,13 @@ CREATE POLICY "Members can send messages"
     )
   );
 
+-- UPDATE: Senders can edit their own messages
 CREATE POLICY "Senders can edit their own messages"
   ON public.messages FOR UPDATE TO authenticated
-  USING (sender_id = auth.uid());
+  USING (sender_id = auth.uid())
+  WITH CHECK (sender_id = auth.uid());
 
+-- DELETE: Senders can delete their own messages
 CREATE POLICY "Senders can delete their own messages"
   ON public.messages FOR DELETE TO authenticated
   USING (sender_id = auth.uid());

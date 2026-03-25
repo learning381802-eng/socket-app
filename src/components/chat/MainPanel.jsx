@@ -1,7 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, Video, Info, Search, MoreVertical, Hash, Lock } from 'lucide-react'
+import {
+  Phone, Video, Info, Search, MoreVertical, Hash, Lock,
+  MessageSquare, FileText, CheckSquare, Link as LinkIcon, Sparkles
+} from 'lucide-react'
 import { useStore } from '../../store'
 import { getMessages, subscribeToMessages, supabase } from '../../lib/supabase'
 import MessageList from './MessageList'
@@ -19,6 +22,7 @@ export default function MainPanel() {
 
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [activeTab, setActiveTab] = useState('chat')
   const realtimeRef = useRef(null)
 
   // Sync active conversation from URL
@@ -96,47 +100,72 @@ export default function MainPanel() {
     setRightPanelOpen(true)
   }
 
+  const TABS = isSpace ? [
+    { id: 'chat', label: 'Chat', icon: <MessageSquare size={16} /> },
+    { id: 'files', label: 'Files', icon: <FileText size={16} /> },
+    { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={16} /> },
+    { id: 'board', label: 'Board', icon: <LinkIcon size={16} /> },
+  ] : []
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full" style={{ background: 'var(--bg-primary)' }}>
+    <div className="main-panel">
       {/* Header */}
-      <div
-        className="flex items-center gap-3 px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-primary)' }}
-      >
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="main-panel-header">
+        <div className="header-left">
           {isSpace ? (
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-lg"
-              style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
-              #
+            <div className="header-space-icon">
+              <Hash size={20} />
             </div>
           ) : (
             <Avatar name={convName} size={36} />
           )}
-          <div className="min-w-0">
-            <h2 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-              {convName}
-            </h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div className="header-info">
+            <h2 className="header-title">{convName}</h2>
+            <p className="header-subtitle">
               {isSpace ? 'Space' : conv?.type === 'group' ? 'Group chat' : 'Direct message'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <HeaderBtn icon={<Phone size={16} />} tooltip="Voice call" />
-          <HeaderBtn icon={<Video size={16} />} tooltip="Video call" />
-          <HeaderBtn icon={<Search size={16} />} tooltip="Search in conversation" />
-          <HeaderBtn
-            icon={<Info size={16} />}
-            tooltip="Info"
-            active={rightPanelOpen}
+        {/* Tabs (Spaces only) */}
+        {isSpace && (
+          <div className="header-tabs">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`header-tab ${activeTab === tab.id ? 'active' : ''}`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="header-actions">
+          <button className="header-action-btn" data-tooltip="Search in conversation">
+            <Search size={18} />
+          </button>
+          <button className="header-action-btn" data-tooltip="Voice call">
+            <Phone size={18} />
+          </button>
+          <button className="header-action-btn" data-tooltip="Video call">
+            <Video size={18} />
+          </button>
+          <button
+            className={`header-action-btn ${rightPanelOpen ? 'active' : ''}`}
             onClick={() => setRightPanelOpen(!rightPanelOpen)}
-          />
+            data-tooltip="Info"
+          >
+            <Info size={18} />
+          </button>
         </div>
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-hidden">
+      <div className="message-list-container">
         <MessageList
           messages={messages}
           loading={messagesLoading}
@@ -154,14 +183,14 @@ export default function MainPanel() {
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
-            className="px-5 py-1 flex items-center gap-2"
+            className="typing-indicator"
           >
-            <div className="flex gap-1 items-center">
+            <div className="typing-dots">
               <span className="typing-dot" />
               <span className="typing-dot" />
               <span className="typing-dot" />
             </div>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            <span className="typing-text">
               {typingNames.length === 1
                 ? 'Someone is typing...'
                 : `${typingNames.length} people are typing...`}
@@ -173,23 +202,5 @@ export default function MainPanel() {
       {/* Composer */}
       <MessageComposer conversationId={id} />
     </div>
-  )
-}
-
-function HeaderBtn({ icon, tooltip, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      data-tooltip={tooltip}
-      className="p-2 rounded-xl transition-all active:scale-95"
-      style={{
-        color: active ? 'var(--accent)' : 'var(--text-secondary)',
-        background: active ? 'var(--accent-subtle)' : 'transparent',
-      }}
-      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-secondary)' }}
-      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = active ? 'var(--accent-subtle)' : 'transparent' }}
-    >
-      {icon}
-    </button>
   )
 }

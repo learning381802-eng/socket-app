@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useStore } from '../store'
 import { supabase, getConversations, subscribeToPresence } from '../lib/supabase'
+import GlobalHeader from '../components/layout/GlobalHeader'
 import Sidebar from '../components/layout/Sidebar'
 import MainPanel from '../components/chat/MainPanel'
 import WelcomePanel from '../components/chat/WelcomePanel'
@@ -63,28 +64,34 @@ export default function ChatLayout() {
   }, [user])
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="chat-layout">
+      {/* Global Header */}
+      <GlobalHeader />
 
-      {/* Main area */}
-      <div className="flex-1 flex min-w-0 overflow-hidden">
-        <Routes>
-          <Route path="/" element={<WelcomePanel />} />
-          <Route path="/socket" element={<WelcomePanel />} />
-          <Route path="dm/:id" element={<MainPanel />} />
-          <Route path="space/:id" element={<MainPanel />} />
-          <Route path="group/:id" element={<MainPanel />} />
-        </Routes>
+      {/* Main content area */}
+      <div className="chat-content">
+        {/* Sidebar */}
+        <Sidebar />
+
+        {/* Main panel */}
+        <div className="chat-main">
+          <Routes>
+            <Route path="/" element={<WelcomePanel />} />
+            <Route path="/socket" element={<WelcomePanel />} />
+            <Route path="dm/:id" element={<MainPanel />} />
+            <Route path="space/:id" element={<MainPanel />} />
+            <Route path="group/:id" element={<MainPanel />} />
+          </Routes>
+        </div>
+
+        {/* Right panel */}
+        {rightPanelOpen && <RightPanel />}
       </div>
-
-      {/* Right panel */}
-      {rightPanelOpen && <RightPanel />}
 
       {/* Overlays */}
       {searchOpen && <SearchOverlay />}
       {modal && <Modal />}
-      
+
       {/* Notifications */}
       <NotificationStack />
     </div>

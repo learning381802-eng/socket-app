@@ -23,7 +23,8 @@ function normalise(s: string) {
 }
 
 export default function MathForge() {
-  const { customProblems, forgeStats, recordAnswer, markSeen, resetSeen } = useMathStore()
+  const { customProblems, recordAnswer, markSeen, resetSeen } = useMathStore()
+  const forgeStats = useMathStore(s => s.forgeStats) // Reactive subscription
   const [cat, setCat] = useState<Category | 'all'>('all')
 
   const allProblems = getAllProblems(customProblems)

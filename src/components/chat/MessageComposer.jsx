@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Paperclip, Smile, Send, X, Bold, Italic, Code } from 'lucide-react'
+import {
+  Paperclip, Smile, Send, X, Bold, Italic, Code,
+  Sparkles, Mic, Image as ImageIcon, FileText, Plus,
+  Calendar, ChevronDown
+} from 'lucide-react'
 import EmojiPicker from 'emoji-picker-react'
 import { useStore } from '../../store'
 import { sendMessage, uploadFile, supabase } from '../../lib/supabase'
 
 export default function MessageComposer({ conversationId }) {
-  const { user, addOptimisticMessage, confirmMessage, addNotification, setTypingUser } = useStore()
+  const { user, addOptimisticMessage, confirmMessage, addNotification, setTypingUser, setModal } = useStore()
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
+  const [showFormatToolbar, setShowFormatToolbar] = useState(false)
   const [attachments, setAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const typingTimeout = useRef(null)
@@ -61,6 +67,7 @@ export default function MessageComposer({ conversationId }) {
     setContent('')
     setAttachments([])
     setShowEmoji(false)
+    setShowFormatToolbar(false)
     setTypingUser(conversationId, user.id, false)
 
     try {
@@ -100,7 +107,7 @@ export default function MessageComposer({ conversationId }) {
   }
 
   const handleEmojiSelect = (emoji) => {
-    setContent((prev) => prev + emoji.getUnified ? emoji.getUnified() : emoji.native)
+    setContent((prev) => prev + (emoji.getUnified ? emoji.getUnified() : emoji.native))
     setShowEmoji(false)
     textareaRef.current?.focus()
   }
@@ -109,36 +116,70 @@ export default function MessageComposer({ conversationId }) {
     setAttachments((prev) => prev.filter((_, i) => i !== idx))
   }
 
+  const applyFormat = (format) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = content
+
+    let before = text.substring(0, start)
+    let selected = text.substring(start, end)
+    let after = text.substring(end)
+
+    if (format === 'bold') {
+      selected = `**${selected}**`
+    } else if (format === 'italic') {
+      selected = `_${selected}_`
+    } else if (format === 'code') {
+      selected = `\`${selected}\``
+    }
+
+    setContent(before + selected + after)
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + 1, end + 1)
+    }, 0)
+  }
+
+  const handleGeminiRewrite = () => {
+    // Placeholder for Gemini AI integration
+    addNotification({ type: 'info', message: 'Gemini Magic Rewrite coming soon!' })
+  }
+
+  const handleVoiceRecord = () => {
+    setIsRecording(!isRecording)
+    addNotification({ type: 'info', message: isRecording ? 'Recording stopped' : 'Recording...' })
+  }
+
+  const openPlusMenu = () => {
+    setModal('attachment-menu')
+  }
+
   const canSend = content.trim().length > 0 || attachments.length > 0
 
   return (
-    <div className="compose-area">
+    <div className="message-composer">
       {/* Attachments preview */}
       {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="composer-attachments">
           {attachments.map((att, i) => (
             <div
               key={i}
-              className="relative group flex items-center gap-2 px-3 py-2 rounded-xl"
-              style={{ background: 'var(--bg-tertiary)' }}
+              className="composer-attachment-item"
             >
               {att.type?.startsWith('image/') ? (
-                <img src={att.url} alt={att.name} className="w-12 h-12 object-cover rounded-lg" />
+                <img src={att.url} alt={att.name} className="composer-attachment-image" />
               ) : (
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}
-                >
-                  📄
+                <div className="composer-attachment-file">
+                  <FileText size={20} />
+                  <span className="composer-attachment-name">{att.name}</span>
                 </div>
               )}
-              <span className="text-xs font-medium truncate max-w-[100px]" style={{ color: 'var(--text-primary)' }}>
-                {att.name}
-              </span>
               <button
                 onClick={() => removeAttachment(i)}
-                className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                style={{ color: 'var(--text-muted)' }}
+                className="composer-attachment-remove"
               >
                 <X size={14} />
               </button>
@@ -148,14 +189,14 @@ export default function MessageComposer({ conversationId }) {
       )}
 
       {/* Input area */}
-      <div className="compose-input-wrapper">
-        {/* Format toggle */}
+      <div className="composer-input-wrapper">
+        {/* Plus menu */}
         <button
-          className="p-2 rounded-full hover:bg-var(--bg-tertiary) transition-colors"
-          style={{ color: 'var(--text-muted)' }}
-          title="Formatting"
+          onClick={openPlusMenu}
+          className="composer-btn composer-plus-btn"
+          data-tooltip="Add attachment"
         >
-          <Bold size={18} />
+          <Plus size={20} />
         </button>
 
         {/* Textarea */}
@@ -169,36 +210,66 @@ export default function MessageComposer({ conversationId }) {
               handleSend()
             }
           }}
+          onFocus={() => setShowFormatToolbar(true)}
+          onBlur={() => setTimeout(() => setShowFormatToolbar(false), 200)}
           placeholder="Type a message"
-          className="compose-input"
+          className="composer-textarea"
           rows={1}
         />
 
         {/* Actions */}
-        <div className="compose-actions">
-          {/* Emoji picker */}
-          <div className="relative">
+        <div className="composer-actions">
+          {/* Formatting toolbar */}
+          <AnimatePresence>
+            {showFormatToolbar && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                className="format-toolbar"
+              >
+                <button onClick={() => applyFormat('bold')} className="format-btn" data-tooltip="Bold">
+                  <Bold size={16} />
+                </button>
+                <button onClick={() => applyFormat('italic')} className="format-btn" data-tooltip="Italic">
+                  <Italic size={16} />
+                </button>
+                <button onClick={() => applyFormat('code')} className="format-btn" data-tooltip="Code">
+                  <Code size={16} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="composer-right-actions">
+            {/* Gemini AI Button */}
             <button
-              onClick={() => setShowEmoji(!showEmoji)}
-              className="p-2 rounded-full hover:bg-var(--bg-tertiary) transition-colors"
-              style={{ color: showEmoji ? 'var(--accent)' : 'var(--text-muted)' }}
+              onClick={handleGeminiRewrite}
+              className="composer-btn composer-gemini-btn"
+              data-tooltip="Gemini Magic Rewrite"
             >
-              <Smile size={20} />
+              <Sparkles size={18} />
             </button>
-            <AnimatePresence>
-              {showEmoji && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute bottom-full right-0 mb-2 z-50"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div 
-                    className="rounded-2xl shadow-lg overflow-hidden"
-                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)' }}
+
+            {/* Emoji picker */}
+            <div className="relative">
+              <button
+                onClick={() => setShowEmoji(!showEmoji)}
+                className="composer-btn"
+                data-tooltip="Emoji"
+              >
+                <Smile size={20} />
+              </button>
+              <AnimatePresence>
+                {showEmoji && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="emoji-picker-popover"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <EmojiPicker 
+                    <EmojiPicker
                       onEmojiClick={handleEmojiSelect}
                       theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
                       skinTonesDisabled
@@ -206,42 +277,51 @@ export default function MessageComposer({ conversationId }) {
                       width={320}
                       height={400}
                     />
-                  </div>
-                </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Attachment upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,application/pdf,.doc,.docx,.txt"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="composer-btn"
+              data-tooltip="Upload file"
+            >
+              {uploading ? (
+                <div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+              ) : (
+                <Paperclip size={20} />
               )}
-            </AnimatePresence>
+            </button>
+
+            {/* Voice message */}
+            <button
+              onClick={handleVoiceRecord}
+              className={`composer-btn ${isRecording ? 'recording' : ''}`}
+              data-tooltip={isRecording ? 'Stop recording' : 'Voice message'}
+            >
+              <Mic size={20} />
+            </button>
+
+            {/* Send button */}
+            <button
+              onClick={handleSend}
+              disabled={!canSend}
+              className={`composer-send-btn ${canSend ? 'active' : ''}`}
+            >
+              <Send size={18} />
+            </button>
           </div>
-
-          {/* Attachment upload */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,application/pdf,.doc,.docx,.txt"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="p-2 rounded-full hover:bg-var(--bg-tertiary) transition-colors"
-            style={{ color: uploading ? 'var(--accent)' : 'var(--text-muted)' }}
-          >
-            {uploading ? (
-              <div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
-            ) : (
-              <Paperclip size={20} />
-            )}
-          </button>
-
-          {/* Send button */}
-          <button
-            onClick={handleSend}
-            disabled={!canSend}
-            className="compose-btn"
-          >
-            <Send size={18} />
-          </button>
         </div>
       </div>
     </div>

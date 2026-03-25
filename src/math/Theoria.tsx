@@ -10,7 +10,8 @@ import {
 const XP_NEEDED = (lvl: number) => lvl * 100
 
 export default function Theoria() {
-  const { customProblems, theoriaStats, recordAnswer, markSeen, resetSeen } = useMathStore()
+  const { customProblems, recordAnswer, markSeen, resetSeen } = useMathStore()
+  const theoriaStats = useMathStore(s => s.theoriaStats) // Reactive subscription
   const allProblems = getAllProblems(customProblems)
 
   const [current, setCurrent] = useState<MathProblem | null>(() =>
