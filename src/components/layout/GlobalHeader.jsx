@@ -25,7 +25,6 @@ export default function GlobalHeader() {
   const [status, setStatus] = useState('active')
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
   const userInitial = displayName[0]?.toUpperCase()
@@ -117,47 +116,19 @@ export default function GlobalHeader() {
           {/* Settings */}
           <div className="settings-wrapper">
             <button
-              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              onClick={() => setModal('settings')}
               className="header-icon-btn"
               data-tooltip="Settings"
             >
               <Settings size={18} />
             </button>
-
-            <AnimatePresence>
-              {showSettingsMenu && (
-                <motion.div
-                  className="settings-dropdown"
-                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <button className="settings-dropdown-item">
-                    <Bell size={16} />
-                    <span>Notifications</span>
-                  </button>
-                  <button className="settings-dropdown-item">
-                    <User size={16} />
-                    <span>Blocked users</span>
-                  </button>
-                  <div className="dropdown-divider" />
-                  <button
-                    onClick={() => { setShowSettingsMenu(false); setModal('settings') }}
-                    className="settings-dropdown-item"
-                  >
-                    <Settings size={16} />
-                    <span>All settings</span>
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
 
           {/* Google Apps Launcher */}
           <button
+            onClick={() => setModal('apps')}
             className="header-icon-btn apps-launcher"
-            data-tooltip="Google Apps"
+            data-tooltip="Apps"
           >
             <Grid3x3 size={18} />
           </button>

@@ -197,7 +197,10 @@ export default function Sidebar() {
               <Compass size={18} />
               <span>Browse Spaces</span>
             </button>
-            <button className="sidebar-footer-btn">
+            <button
+              onClick={() => setModal('apps')}
+              className="sidebar-footer-btn"
+            >
               <Bot size={18} />
               <span>Apps</span>
             </button>
@@ -207,12 +210,14 @@ export default function Sidebar() {
             <button
               className="sidebar-footer-icon-btn"
               data-tooltip="Browse Spaces"
+              onClick={() => setModal('browse-spaces')}
             >
               <Compass size={18} />
             </button>
             <button
               className="sidebar-footer-icon-btn"
               data-tooltip="Apps"
+              onClick={() => setModal('apps')}
             >
               <Bot size={18} />
             </button>

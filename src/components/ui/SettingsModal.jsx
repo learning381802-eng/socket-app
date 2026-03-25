@@ -1,221 +1,515 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Bell, Moon, Sun, Monitor, User, Shield, Palette, Globe, Type } from 'lucide-react'
+import {
+  X, Bell, Moon, Sun, Monitor, Palette, User, Lock,
+  Globe, Shield, Database, Trash2, Check, ChevronRight,
+  Eye, EyeOff, Volume2, VolumeX, Zap, Clock, AlertCircle
+} from 'lucide-react'
 import { useStore } from '../../store'
-import { supabase } from '../../lib/supabase'
+
+const THEMES = [
+  { id: 'light', name: 'Light', icon: Sun, preview: '#ffffff' },
+  { id: 'dark', name: 'Dark', icon: Moon, preview: '#191921' },
+  { id: 'system', name: 'System', icon: Monitor, preview: 'linear-gradient(135deg, #fff 50%, #191921 50%)' },
+]
+
+const ACCENT_COLORS = [
+  { id: 'blue', name: 'Ocean', color: '#1a73e8' },
+  { id: 'purple', name: 'Amethyst', color: '#8ab4f8' },
+  { id: 'green', name: 'Forest', color: '#1e8e3e' },
+  { id: 'orange', name: 'Sunset', color: '#e37400' },
+  { id: 'red', name: 'Cherry', color: '#c5221f' },
+  { id: 'teal', name: 'Teal', color: '#00897b' },
+]
+
+const NOTIFICATION_TYPES = [
+  { id: 'all', label: 'All messages', description: 'Get notified about every message' },
+  { id: 'mentions', label: 'Mentions only', description: 'Only when someone mentions you' },
+  { id: 'none', label: 'Nothing', description: 'Disable all notifications' },
+]
 
 export default function SettingsModal() {
-  const { modal, setModal, user, theme, toggleTheme } = useStore()
-  const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || '')
-  const [bio, setBio] = useState(user?.user_metadata?.bio || '')
-  const [saving, setSaving] = useState(false)
+  const { setModal, theme, toggleTheme, user } = useStore()
+  const [activeTab, setActiveTab] = useState('general')
+  const [settings, setSettings] = useState({
+    // General
+    displayName: user?.user_metadata?.display_name || '',
+    email: user?.email || '',
+    statusMessage: '',
+    
+    // Notifications
+    notificationsEnabled: true,
+    notificationType: 'mentions',
+    soundEnabled: true,
+    desktopNotifications: true,
+    emailNotifications: false,
+    
+    // Privacy
+    showOnlineStatus: true,
+    showReadReceipts: true,
+    allowDirectMessages: 'everyone', // everyone, contacts, none
+    
+    // Appearance
+    themeMode: theme === 'dark' ? 'dark' : 'light',
+    accentColor: 'blue',
+    messageDensity: 'comfortable', // compact, comfortable, spacious
+    fontSize: 'medium', // small, medium, large
+    
+    // Advanced
+    autoPlayGifs: true,
+    showEmojis: true,
+    enterToSend: true,
+    compressImages: true,
+  })
 
-  const isOpen = modal === 'settings'
-
-  const handleSave = async () => {
-    setSaving(true)
-    await supabase.auth.updateUser({
-      data: { display_name: displayName, bio },
-    })
-    setSaving(false)
-    setModal(null)
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }))
+    if (key === 'themeMode') {
+      if (value === 'dark' && theme !== 'dark') toggleTheme()
+      if (value === 'light' && theme === 'dark') toggleTheme()
+    }
   }
 
-  if (!isOpen) return null
+  const tabs = [
+    { id: 'general', label: 'General', icon: User },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'privacy', label: 'Privacy', icon: Lock },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'advanced', label: 'Advanced', icon: Zap },
+  ]
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40"
-            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
-            onClick={() => setModal(null)}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-          >
-            <div
-              className="w-full max-w-lg rounded-3xl shadow-panel pointer-events-auto overflow-hidden"
-              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)' }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 pt-6 pb-4">
-                <h2 className="font-display text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Settings
-                </h2>
-                <button
-                  onClick={() => setModal(null)}
-                  className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="px-6 pb-6 space-y-6 max-h-[70vh] overflow-y-auto">
-                {/* Profile Section */}
-                <SettingsSection icon={<User size={16} />} title="Profile">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text-muted)' }}>
-                        Display Name
-                      </label>
-                      <input
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                        style={{ 
-                          background: 'var(--bg-secondary)', 
-                          border: '1px solid var(--border)',
-                          color: 'var(--text-primary)'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text-muted)' }}>
-                        Bio
-                      </label>
-                      <textarea
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        rows={3}
-                        maxLength={160}
-                        className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
-                        style={{ 
-                          background: 'var(--bg-secondary)', 
-                          border: '1px solid var(--border)',
-                          color: 'var(--text-primary)'
-                        }}
-                      />
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{bio.length}/160</span>
-                    </div>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                      style={{ 
-                        background: saving ? 'var(--bg-tertiary)' : 'var(--accent)',
-                        cursor: saving ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {saving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </div>
-                </SettingsSection>
-
-                {/* Appearance Section */}
-                <SettingsSection icon={<Palette size={16} />} title="Appearance">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text-muted)' }}>
-                        Theme
-                      </label>
-                      <div className="flex gap-2">
-                        <ThemeOption
-                          icon={<Sun size={16} />}
-                          label="Light"
-                          active={theme === 'light'}
-                          onClick={() => theme !== 'light' && toggleTheme()}
-                        />
-                        <ThemeOption
-                          icon={<Moon size={16} />}
-                          label="Dark"
-                          active={theme === 'dark'}
-                          onClick={() => theme !== 'dark' && toggleTheme()}
-                        />
-                        <ThemeOption
-                          icon={<Monitor size={16} />}
-                          label="System"
-                          active={false}
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </SettingsSection>
-
-                {/* Notifications Section */}
-                <SettingsSection icon={<Bell size={16} />} title="Notifications">
-                  <div className="space-y-3">
-                    <ToggleSetting label="Desktop notifications" defaultChecked />
-                    <ToggleSetting label="Message previews" defaultChecked />
-                    <ToggleSetting label="Sound effects" defaultChecked />
-                    <ToggleSetting label="Mention notifications" defaultChecked />
-                  </div>
-                </SettingsSection>
-
-                {/* Privacy Section */}
-                <SettingsSection icon={<Shield size={16} />} title="Privacy">
-                  <div className="space-y-3">
-                    <ToggleSetting label="Show online status" defaultChecked />
-                    <ToggleSetting label="Allow direct messages from anyone" defaultChecked={false} />
-                    <ToggleSetting label="Read receipts" defaultChecked />
-                  </div>
-                </SettingsSection>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  )
-}
-
-function SettingsSection({ icon, title, children }) {
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <span style={{ color: 'var(--accent)' }}>{icon}</span>
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function ThemeOption({ icon, label, active, onClick, disabled }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex-1 flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all ${
-        active 
-          ? 'border-[var(--accent)] bg-[var(--accent-subtle)]' 
-          : 'border-[var(--border)] bg-[var(--bg-secondary)]'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--accent)]'}`}
-      style={{ 
-        color: active ? 'var(--accent)' : 'var(--text-secondary)',
-        cursor: disabled ? 'not-allowed' : 'pointer'
-      }}
-    >
-      {icon}
-      <span className="text-xs font-medium">{label}</span>
-    </button>
-  )
-}
-
-function ToggleSetting({ label, defaultChecked }) {
-  const [checked, setChecked] = useState(defaultChecked)
-  
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-      <button
-        onClick={() => setChecked(!checked)}
-        className={`w-11 h-6 rounded-full transition-colors relative ${checked ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'}`}
+    <div className="settings-modal-backdrop" onClick={() => setModal(null)}>
+      <motion.div
+        className="settings-modal"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <span
-          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${checked ? 'left-6' : 'left-1'}`}
-        />
-      </button>
+        {/* Header */}
+        <div className="settings-header">
+          <div>
+            <h2 className="settings-title">Settings</h2>
+            <p className="settings-subtitle">Manage your account and preferences</p>
+          </div>
+          <button onClick={() => setModal(null)} className="settings-close-btn">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="settings-content">
+          {/* Sidebar Tabs */}
+          <div className="settings-sidebar">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
+                >
+                  <Icon size={18} />
+                  <span>{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <ChevronRight size={16} className="settings-tab-chevron" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Settings Panel */}
+          <div className="settings-panel">
+            <AnimatePresence mode="wait">
+              {activeTab === 'general' && (
+                <GeneralSettings settings={settings} updateSetting={updateSetting} />
+              )}
+              {activeTab === 'notifications' && (
+                <NotificationsSettings settings={settings} updateSetting={updateSetting} />
+              )}
+              {activeTab === 'privacy' && (
+                <PrivacySettings settings={settings} updateSetting={updateSetting} />
+              )}
+              {activeTab === 'appearance' && (
+                <AppearanceSettings settings={settings} updateSetting={updateSetting} />
+              )}
+              {activeTab === 'advanced' && (
+                <AdvancedSettings settings={settings} updateSetting={updateSetting} />
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
     </div>
+  )
+}
+
+function GeneralSettings({ settings, updateSetting }) {
+  return (
+    <motion.div
+      className="settings-section"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="settings-section-header">
+        <h3>Profile Information</h3>
+        <p>Your public profile details</p>
+      </div>
+
+      <div className="settings-form-group">
+        <label className="settings-label">Display Name</label>
+        <input
+          type="text"
+          value={settings.displayName}
+          onChange={(e) => updateSetting('displayName', e.target.value)}
+          className="settings-input"
+          placeholder="Your name"
+        />
+      </div>
+
+      <div className="settings-form-group">
+        <label className="settings-label">Email</label>
+        <input
+          type="email"
+          value={settings.email}
+          disabled
+          className="settings-input settings-input-disabled"
+        />
+        <p className="settings-hint">Email cannot be changed</p>
+      </div>
+
+      <div className="settings-form-group">
+        <label className="settings-label">Status Message</label>
+        <input
+          type="text"
+          value={settings.statusMessage}
+          onChange={(e) => updateSetting('statusMessage', e.target.value)}
+          className="settings-input"
+          placeholder="What's on your mind?"
+          maxLength={50}
+        />
+        <p className="settings-hint">{settings.statusMessage.length}/50 characters</p>
+      </div>
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Account</h3>
+      </div>
+
+      <button className="settings-danger-btn">
+        <Trash2 size={16} />
+        <span>Delete Account</span>
+      </button>
+    </motion.div>
+  )
+}
+
+function NotificationsSettings({ settings, updateSetting }) {
+  return (
+    <motion.div
+      className="settings-section"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="settings-section-header">
+        <h3>Notification Preferences</h3>
+        <p>Choose how you want to be notified</p>
+      </div>
+
+      <div className="settings-option-group">
+        <label className="settings-option-label">Notify me about</label>
+        {NOTIFICATION_TYPES.map((type) => (
+          <label key={type.id} className="settings-radio-option">
+            <input
+              type="radio"
+              name="notificationType"
+              checked={settings.notificationType === type.id}
+              onChange={() => updateSetting('notificationType', type.id)}
+              className="settings-radio"
+            />
+            <div className="settings-radio-content">
+              <span className="settings-radio-title">{type.label}</span>
+              <span className="settings-radio-desc">{type.description}</span>
+            </div>
+            {settings.notificationType === type.id && (
+              <Check size={18} className="settings-radio-check" />
+            )}
+          </label>
+        ))}
+      </div>
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Notification Channels</h3>
+      </div>
+
+      <SettingsToggle
+        label="Desktop notifications"
+        description="Show notifications on your desktop"
+        icon={Bell}
+        checked={settings.desktopNotifications}
+        onChange={(v) => updateSetting('desktopNotifications', v)}
+      />
+
+      <SettingsToggle
+        label="Sound"
+        description="Play sound for notifications"
+        icon={settings.soundEnabled ? Volume2 : VolumeX}
+        checked={settings.soundEnabled}
+        onChange={(v) => updateSetting('soundEnabled', v)}
+      />
+
+      <SettingsToggle
+        label="Email notifications"
+        description="Receive notification emails"
+        icon={Globe}
+        checked={settings.emailNotifications}
+        onChange={(v) => updateSetting('emailNotifications', v)}
+      />
+    </motion.div>
+  )
+}
+
+function PrivacySettings({ settings, updateSetting }) {
+  return (
+    <motion.div
+      className="settings-section"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="settings-section-header">
+        <h3>Privacy Settings</h3>
+        <p>Control your visibility and interactions</p>
+      </div>
+
+      <SettingsToggle
+        label="Show online status"
+        description="Let others see when you're online"
+        icon={settings.showOnlineStatus ? Eye : EyeOff}
+        checked={settings.showOnlineStatus}
+        onChange={(v) => updateSetting('showOnlineStatus', v)}
+      />
+
+      <SettingsToggle
+        label="Read receipts"
+        description="Show when you've read messages"
+        icon={Check}
+        checked={settings.showReadReceipts}
+        onChange={(v) => updateSetting('showReadReceipts', v)}
+      />
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Direct Messages</h3>
+      </div>
+
+      <div className="settings-form-group">
+        <label className="settings-label">Who can send you direct messages</label>
+        <select
+          value={settings.allowDirectMessages}
+          onChange={(e) => updateSetting('allowDirectMessages', e.target.value)}
+          className="settings-select"
+        >
+          <option value="everyone">Everyone</option>
+          <option value="contacts">Contacts only</option>
+          <option value="none">Nobody</option>
+        </select>
+      </div>
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Blocked Users</h3>
+      </div>
+
+      <div className="settings-empty-state">
+        <Shield size={40} className="settings-empty-icon" />
+        <p className="settings-empty-title">No blocked users</p>
+        <p className="settings-empty-text">
+          Blocked users won't be able to message you or see your status
+        </p>
+      </div>
+    </motion.div>
+  )
+}
+
+function AppearanceSettings({ settings, updateSetting }) {
+  return (
+    <motion.div
+      className="settings-section"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="settings-section-header">
+        <h3>Theme</h3>
+        <p>Customize the look and feel</p>
+      </div>
+
+      <div className="settings-theme-grid">
+        {THEMES.map((t) => {
+          const Icon = t.icon
+          return (
+            <button
+              key={t.id}
+              onClick={() => updateSetting('themeMode', t.id)}
+              className={`settings-theme-option ${settings.themeMode === t.id ? 'active' : ''}`}
+            >
+              <div
+                className="settings-theme-preview"
+                style={{ background: t.preview }}
+              />
+              <Icon size={20} className="settings-theme-icon" />
+              <span className="settings-theme-name">{t.name}</span>
+              {settings.themeMode === t.id && (
+                <Check size={18} className="settings-theme-check" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Accent Color</h3>
+      </div>
+
+      <div className="settings-color-grid">
+        {ACCENT_COLORS.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => updateSetting('accentColor', c.id)}
+            className={`settings-color-option ${settings.accentColor === c.id ? 'active' : ''}`}
+            style={{ background: c.color }}
+            data-tooltip={c.name}
+          >
+            {settings.accentColor === c.id && <Check size={18} color="white" />}
+          </button>
+        ))}
+      </div>
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Layout</h3>
+      </div>
+
+      <div className="settings-form-group">
+        <label className="settings-label">Message density</label>
+        <select
+          value={settings.messageDensity}
+          onChange={(e) => updateSetting('messageDensity', e.target.value)}
+          className="settings-select"
+        >
+          <option value="compact">Compact</option>
+          <option value="comfortable">Comfortable</option>
+          <option value="spacious">Spacious</option>
+        </select>
+      </div>
+
+      <div className="settings-form-group">
+        <label className="settings-label">Font size</label>
+        <select
+          value={settings.fontSize}
+          onChange={(e) => updateSetting('fontSize', e.target.value)}
+          className="settings-select"
+        >
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </div>
+    </motion.div>
+  )
+}
+
+function AdvancedSettings({ settings, updateSetting }) {
+  return (
+    <motion.div
+      className="settings-section"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="settings-section-header">
+        <h3>Advanced Settings</h3>
+        <p>Fine-tune your experience</p>
+      </div>
+
+      <SettingsToggle
+        label="Auto-play GIFs"
+        description="Automatically play animated GIFs"
+        icon={Zap}
+        checked={settings.autoPlayGifs}
+        onChange={(v) => updateSetting('autoPlayGifs', v)}
+      />
+
+      <SettingsToggle
+        label="Show emoji previews"
+        description="Display emoji images in messages"
+        icon={AlertCircle}
+        checked={settings.showEmojis}
+        onChange={(v) => updateSetting('showEmojis', v)}
+      />
+
+      <SettingsToggle
+        label="Press Enter to send"
+        description="Send messages with Enter key"
+        icon={Check}
+        checked={settings.enterToSend}
+        onChange={(v) => updateSetting('enterToSend', v)}
+      />
+
+      <SettingsToggle
+        label="Compress images"
+        description="Reduce image upload size"
+        icon={Database}
+        checked={settings.compressImages}
+        onChange={(v) => updateSetting('compressImages', v)}
+      />
+
+      <div className="settings-section-header settings-section-header-spaced">
+        <h3>Data & Storage</h3>
+      </div>
+
+      <div className="settings-storage-info">
+        <div className="settings-storage-bar">
+          <div className="settings-storage-used" style={{ width: '23%' }} />
+        </div>
+        <p className="settings-storage-text">
+          <strong>2.3 GB</strong> of <strong>10 GB</strong> used
+        </p>
+      </div>
+
+      <button className="settings-action-btn">
+        <Trash2 size={16} />
+        <span>Clear cache</span>
+      </button>
+    </motion.div>
+  )
+}
+
+function SettingsToggle({ label, description, icon: Icon, checked, onChange }) {
+  return (
+    <label className="settings-toggle">
+      <div className="settings-toggle-content">
+        {Icon && <Icon size={18} className="settings-toggle-icon" />}
+        <div className="settings-toggle-text">
+          <span className="settings-toggle-label">{label}</span>
+          {description && <span className="settings-toggle-desc">{description}</span>}
+        </div>
+      </div>
+      <div className={`settings-switch ${checked ? 'active' : ''}`}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="settings-switch-input"
+        />
+        <span className="settings-switch-slider" />
+      </div>
+    </label>
   )
 }

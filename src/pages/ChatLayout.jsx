@@ -74,7 +74,7 @@ export default function ChatLayout() {
         <Sidebar />
 
         {/* Main panel */}
-        <div className="chat-main">
+        <div className={`chat-main ${sidebarCollapsed ? 'chat-main-centered' : ''}`}>
           <Routes>
             <Route path="/" element={<WelcomePanel />} />
             <Route path="/socket" element={<WelcomePanel />} />
