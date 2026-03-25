@@ -18,6 +18,32 @@ export const useStore = create(
       document.documentElement.classList.toggle('dark', next === 'dark')
     },
 
+    // Settings
+    settings: {
+      displayName: '',
+      statusMessage: '',
+      notificationsEnabled: true,
+      notificationType: 'mentions',
+      soundEnabled: true,
+      desktopNotifications: true,
+      showOnlineStatus: true,
+      showReadReceipts: true,
+      themeMode: 'system',
+      accentColor: 'blue',
+      messageDensity: 'comfortable',
+    },
+    updateSettings: (updates) => {
+      const newSettings = { ...get().settings, ...updates }
+      localStorage.setItem('socket-settings', JSON.stringify(newSettings))
+      set({ settings: newSettings })
+    },
+    loadSettings: () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('socket-settings') || '{}')
+        set({ settings: { ...get().settings, ...saved } })
+      } catch {}
+    },
+
     // Sidebar
     sidebarCollapsed: false,
     rightPanelOpen: false,
@@ -47,7 +73,6 @@ export const useStore = create(
     setMessagesLoading: (v) => set({ messagesLoading: v }),
     addMessage: (msg) => {
       set((s) => {
-        // Optimistic update: replace temp message if exists
         const exists = s.messages.find((m) => m.id === msg.id || m.tempId === msg.tempId)
         if (exists) {
           return { messages: s.messages.map((m) => (m.id === exists.id ? msg : m)) }
@@ -63,6 +88,15 @@ export const useStore = create(
       })),
     removeMessage: (id) =>
       set((s) => ({ messages: s.messages.filter((m) => m.id !== id) })),
+    toggleStarMessage: (msg) => {
+      const starred = get().starredMessages
+      const exists = starred.find((m) => m.id === msg.id)
+      if (exists) {
+        set({ starredMessages: starred.filter((m) => m.id !== msg.id) })
+      } else {
+        set({ starredMessages: [...starred, { ...msg, starredAt: Date.now() }] })
+      }
+    },
 
     // Presence & Typing
     onlineUsers: {},
@@ -100,8 +134,83 @@ export const useStore = create(
     members: [],
     setMembers: (members) => set({ members }),
 
+    // Mentions
+    mentions: [
+      {
+        id: 'mention-1',
+        messageId: 'msg-1',
+        conversationId: 'conv-1',
+        conversationName: 'Engineering Team',
+        senderName: 'Alice Chen',
+        senderAvatar: 'AC',
+        content: 'Hey @you, can you review this PR?',
+        timestamp: Date.now() - 3600000, // 1 hour ago
+        read: false,
+      },
+      {
+        id: 'mention-2',
+        messageId: 'msg-2',
+        conversationId: 'conv-2',
+        conversationName: 'Product Updates',
+        senderName: 'Bob Smith',
+        senderAvatar: 'BS',
+        content: '@you The meeting is at 3pm today',
+        timestamp: Date.now() - 7200000, // 2 hours ago
+        read: false,
+      },
+      {
+        id: 'mention-3',
+        messageId: 'msg-3',
+        conversationId: 'conv-1',
+        conversationName: 'Engineering Team',
+        senderName: 'Carol White',
+        senderAvatar: 'CW',
+        content: 'Thanks @you for the help!',
+        timestamp: Date.now() - 86400000, // 1 day ago
+        read: true,
+      },
+    ],
+    markMentionRead: (id) => {
+      set((s) => ({
+        mentions: s.mentions.map((m) => (m.id === id ? { ...m, read: true } : m)),
+      }))
+    },
+    markAllMentionsRead: () => {
+      set((s) => ({
+        mentions: s.mentions.map((m) => ({ ...m, read: true })),
+      }))
+    },
+
+    // Starred Messages
+    starredMessages: [
+      {
+        id: 'star-1',
+        conversationId: 'conv-1',
+        conversationName: 'Engineering Team',
+        senderName: 'David Lee',
+        senderAvatar: 'DL',
+        content: 'Here are the API docs: https://api.example.com/docs',
+        timestamp: Date.now() - 172800000, // 2 days ago
+        starredAt: Date.now() - 100000000,
+      },
+      {
+        id: 'star-2',
+        conversationId: 'conv-3',
+        conversationName: 'Design System',
+        senderName: 'Eva Martinez',
+        senderAvatar: 'EM',
+        content: 'New component library is ready for review',
+        timestamp: Date.now() - 259200000, // 3 days ago
+        starredAt: Date.now() - 150000000,
+      },
+    ],
+
     // Modal state
     modal: null,
     setModal: (modal) => set({ modal }),
+
+    // Active view for routing
+    activeView: 'home', // home, mentions, starred, chat
+    setActiveView: (view) => set({ activeView: view }),
   }))
 )

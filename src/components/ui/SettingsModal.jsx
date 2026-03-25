@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Bell, Moon, Sun, Monitor, Palette, User, Lock,
@@ -29,41 +29,21 @@ const NOTIFICATION_TYPES = [
 ]
 
 export default function SettingsModal() {
-  const { setModal, theme, toggleTheme, user } = useStore()
+  const { setModal, settings, updateSettings, theme, toggleTheme, user } = useStore()
   const [activeTab, setActiveTab] = useState('general')
-  const [settings, setSettings] = useState({
-    // General
-    displayName: user?.user_metadata?.display_name || '',
-    email: user?.email || '',
-    statusMessage: '',
-    
-    // Notifications
-    notificationsEnabled: true,
-    notificationType: 'mentions',
-    soundEnabled: true,
-    desktopNotifications: true,
-    emailNotifications: false,
-    
-    // Privacy
-    showOnlineStatus: true,
-    showReadReceipts: true,
-    allowDirectMessages: 'everyone', // everyone, contacts, none
-    
-    // Appearance
-    themeMode: theme === 'dark' ? 'dark' : 'light',
-    accentColor: 'blue',
-    messageDensity: 'comfortable', // compact, comfortable, spacious
-    fontSize: 'medium', // small, medium, large
-    
-    // Advanced
-    autoPlayGifs: true,
-    showEmojis: true,
-    enterToSend: true,
-    compressImages: true,
-  })
+  
+  // Local state that syncs with store
+  const [localSettings, setLocalSettings] = useState(settings)
+
+  useEffect(() => {
+    setLocalSettings(settings)
+  }, [settings])
 
   const updateSetting = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
+    setLocalSettings(prev => ({ ...prev, [key]: value }))
+    updateSettings({ [key]: value })
+    
+    // Handle theme changes
     if (key === 'themeMode') {
       if (value === 'dark' && theme !== 'dark') toggleTheme()
       if (value === 'light' && theme === 'dark') toggleTheme()
@@ -124,19 +104,19 @@ export default function SettingsModal() {
           <div className="settings-panel">
             <AnimatePresence mode="wait">
               {activeTab === 'general' && (
-                <GeneralSettings settings={settings} updateSetting={updateSetting} />
+                <GeneralSettings settings={localSettings} updateSetting={updateSetting} user={user} />
               )}
               {activeTab === 'notifications' && (
-                <NotificationsSettings settings={settings} updateSetting={updateSetting} />
+                <NotificationsSettings settings={localSettings} updateSetting={updateSetting} />
               )}
               {activeTab === 'privacy' && (
-                <PrivacySettings settings={settings} updateSetting={updateSetting} />
+                <PrivacySettings settings={localSettings} updateSetting={updateSetting} />
               )}
               {activeTab === 'appearance' && (
-                <AppearanceSettings settings={settings} updateSetting={updateSetting} />
+                <AppearanceSettings settings={localSettings} updateSetting={updateSetting} theme={theme} />
               )}
               {activeTab === 'advanced' && (
-                <AdvancedSettings settings={settings} updateSetting={updateSetting} />
+                <AdvancedSettings settings={localSettings} updateSetting={updateSetting} />
               )}
             </AnimatePresence>
           </div>
@@ -146,7 +126,10 @@ export default function SettingsModal() {
   )
 }
 
-function GeneralSettings({ settings, updateSetting }) {
+function GeneralSettings({ settings, updateSetting, user }) {
+  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || ''
+  const email = user?.email || ''
+  
   return (
     <motion.div
       className="settings-section"
@@ -164,7 +147,7 @@ function GeneralSettings({ settings, updateSetting }) {
         <label className="settings-label">Display Name</label>
         <input
           type="text"
-          value={settings.displayName}
+          value={settings.displayName || displayName}
           onChange={(e) => updateSetting('displayName', e.target.value)}
           className="settings-input"
           placeholder="Your name"
@@ -175,7 +158,7 @@ function GeneralSettings({ settings, updateSetting }) {
         <label className="settings-label">Email</label>
         <input
           type="email"
-          value={settings.email}
+          value={email}
           disabled
           className="settings-input settings-input-disabled"
         />
@@ -186,13 +169,13 @@ function GeneralSettings({ settings, updateSetting }) {
         <label className="settings-label">Status Message</label>
         <input
           type="text"
-          value={settings.statusMessage}
+          value={settings.statusMessage || ''}
           onChange={(e) => updateSetting('statusMessage', e.target.value)}
           className="settings-input"
           placeholder="What's on your mind?"
           maxLength={50}
         />
-        <p className="settings-hint">{settings.statusMessage.length}/50 characters</p>
+        <p className="settings-hint">{(settings.statusMessage || '').length}/50 characters</p>
       </div>
 
       <div className="settings-section-header settings-section-header-spaced">

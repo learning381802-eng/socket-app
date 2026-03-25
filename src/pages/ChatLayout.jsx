@@ -10,11 +10,13 @@ import RightPanel from '../components/layout/RightPanel'
 import SearchOverlay from '../components/ui/SearchOverlay'
 import Modal from '../components/ui/Modal'
 import NotificationStack from '../components/ui/NotificationStack'
+import MentionsPage from './MentionsPage'
+import StarredPage from './StarredPage'
 
 export default function ChatLayout() {
   const {
     user, setConversations, addConversation, rightPanelOpen,
-    sidebarCollapsed, setOnlineUsers, searchOpen, modal,
+    sidebarCollapsed, setOnlineUsers, searchOpen, modal, setActiveView, activeView,
   } = useStore()
 
   // Load conversations
@@ -78,6 +80,8 @@ export default function ChatLayout() {
           <Routes>
             <Route path="/" element={<WelcomePanel />} />
             <Route path="/socket" element={<WelcomePanel />} />
+            <Route path="/socket/mentions" element={<MentionsPage />} />
+            <Route path="/socket/starred" element={<StarredPage />} />
             <Route path="dm/:id" element={<MainPanel />} />
             <Route path="space/:id" element={<MainPanel />} />
             <Route path="group/:id" element={<MainPanel />} />

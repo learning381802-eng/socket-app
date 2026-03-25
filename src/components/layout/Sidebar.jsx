@@ -62,20 +62,20 @@ export default function Sidebar() {
             icon={<Home size={18} />}
             label="Home"
             active={location.pathname === '/socket' || location.pathname === '/'}
-            onClick={() => navigate('/socket')}
+            onClick={() => { navigate('/socket'); setActiveView('home') }}
             collapsed={isCollapsed}
           />
           <NavItem
             icon={<AtSign size={18} />}
             label="Mentions"
-            badge={3}
-            onClick={() => navigate('/socket/mentions')}
+            badge={useStore.getState().mentions.filter(m => !m.read).length}
+            onClick={() => { navigate('/socket/mentions'); setActiveView('mentions') }}
             collapsed={isCollapsed}
           />
           <NavItem
             icon={<Star size={18} />}
             label="Starred"
-            onClick={() => navigate('/socket/starred')}
+            onClick={() => { navigate('/socket/starred'); setActiveView('starred') }}
             collapsed={isCollapsed}
           />
         </div>
