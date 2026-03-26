@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useMathStore, TrainerType, Category, Difficulty } from './mathStore'
 import { getMathAdmins, addMathAdmin, removeMathAdmin } from '../pages/MathHomepage'
+import CategoriesManager from './CategoriesManager'
 
 interface Props { userEmail: string }
 
@@ -9,7 +10,7 @@ const isOwner = (e: string) => e === 'jason38180202@gmail.com'
 
 export default function AdminPanel({ userEmail }: Props) {
   const [open, setOpen]     = useState(false)
-  const [tab, setTab]       = useState<'add' | 'list' | 'admins'>('add')
+  const [tab, setTab]       = useState<'add' | 'list' | 'admins' | 'categories'>('categories')
   const { addProblem, customProblems, deleteProblem } = useMathStore()
   const [admins, setAdmins] = useState(getMathAdmins)
   const [newEmail, setNewEmail] = useState('')
@@ -73,6 +74,7 @@ export default function AdminPanel({ userEmail }: Props) {
       {open && (
         <div className="admin-body">
           <div className="admin-tabs">
+            <button className={`admin-tab ${tab === 'categories' ? 'active' : ''}`} onClick={() => setTab('categories')}>📁 Categories</button>
             <button className={`admin-tab ${tab === 'add'    ? 'active' : ''}`} onClick={() => setTab('add')}>+ Add Problem</button>
             <button className={`admin-tab ${tab === 'list'   ? 'active' : ''}`} onClick={() => setTab('list')}>
               My Problems {customProblems.length > 0 && `(${customProblems.length})`}
@@ -81,6 +83,13 @@ export default function AdminPanel({ userEmail }: Props) {
               <button className={`admin-tab ${tab === 'admins' ? 'active' : ''}`} onClick={() => setTab('admins')}>👥 Admins</button>
             )}
           </div>
+
+          {/* ── CATEGORIES MANAGER ── */}
+          {tab === 'categories' && (
+            <div className="admin-section">
+              <CategoriesManager />
+            </div>
+          )}
 
           {/* ── ADD PROBLEM ── */}
           {tab === 'add' && (

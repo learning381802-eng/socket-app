@@ -1,9 +1,19 @@
 // mathStore.ts
 import { create } from 'zustand'
 
-export type Category = 'algebra' | 'geometry' | 'calculus' | 'proof'
+export type Category = 'algebra' | 'geometry' | 'calculus' | 'proof' | string
 export type Difficulty = 'easy' | 'medium' | 'hard'
 export type TrainerType = 'mathforge' | 'theoria'
+
+export interface MathCategory {
+  id: string
+  name: string
+  description: string
+  color: string
+  icon: string
+  createdAt: number
+  problemCount: number
+}
 
 export interface MathProblem {
   id: string
@@ -78,6 +88,7 @@ export const DEFAULT_PROBLEMS: MathProblem[] = [
 
 // ── Storage helpers ───────────────────────────────────────────────
 const CUSTOM_KEY = 'math_custom_problems'
+const CATEGORIES_KEY = 'math_categories'
 const FORGE_STATS_KEY = 'mathforge_stats'
 const THEORIA_STATS_KEY = 'theoria_stats'
 
@@ -86,11 +97,30 @@ function loadCustom(): MathProblem[] {
 }
 function saveCustom(p: MathProblem[]) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(p)) }
 
+function loadCategories(): MathCategory[] {
+  try { return JSON.parse(localStorage.getItem(CATEGORIES_KEY) || '[]') } catch { return [] }
+}
+function saveCategories(cats: MathCategory[]) { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(cats)) }
+
+// Default categories
+export const DEFAULT_CATEGORIES: MathCategory[] = [
+  { id: 'algebra', name: 'Algebra', description: 'Equations, polynomials, and functions', color: '#2d6a4f', icon: 'x²', createdAt: 0, problemCount: 0 },
+  { id: 'geometry', name: 'Geometry', description: 'Shapes, angles, and spatial relationships', color: '#185fa5', icon: '△', createdAt: 0, problemCount: 0 },
+  { id: 'calculus', name: 'Calculus', description: 'Derivatives, integrals, and limits', color: '#9b2226', icon: '∫', createdAt: 0, problemCount: 0 },
+  { id: 'proof', name: 'Proofs', description: 'Mathematical proofs and logic', color: '#6b3fa0', icon: 'Θ', createdAt: 0, problemCount: 0 },
+]
+
 // ── Store ─────────────────────────────────────────────────────────
 interface MathStore {
   customProblems: MathProblem[]
   addProblem: (p: Omit<MathProblem, 'id' | 'createdAt'>) => void
   deleteProblem: (id: string) => void
+
+  customCategories: MathCategory[]
+  addCategory: (c: Omit<MathCategory, 'id' | 'createdAt' | 'problemCount'>) => void
+  editCategory: (id: string, updates: Partial<MathCategory>) => void
+  deleteCategory: (id: string) => void
+  getAllCategories: () => MathCategory[]
 
   forgeStats: PlayerStats
   theoriaStats: PlayerStats
@@ -101,6 +131,7 @@ interface MathStore {
 
 export const useMathStore = create<MathStore>((set, get) => ({
   customProblems: loadCustom(),
+  customCategories: loadCategories(),
 
   addProblem: (p) => {
     const n: MathProblem = { ...p, id: 'custom-' + Date.now(), createdAt: Date.now() }
@@ -112,6 +143,35 @@ export const useMathStore = create<MathStore>((set, get) => ({
     const updated = get().customProblems.filter(p => p.id !== id)
     saveCustom(updated)
     set({ customProblems: updated })
+  },
+
+  addCategory: (c) => {
+    const newCat: MathCategory = {
+      ...c,
+      id: 'cat-' + Date.now(),
+      createdAt: Date.now(),
+      problemCount: 0,
+    }
+    const updated = [...get().customCategories, newCat]
+    saveCategories(updated)
+    set({ customCategories: updated })
+  },
+  editCategory: (id, updates) => {
+    const updated = get().customCategories.map(cat =>
+      cat.id === id ? { ...cat, ...updates } : cat
+    )
+    saveCategories(updated)
+    set({ customCategories: updated })
+  },
+  deleteCategory: (id) => {
+    // Don't allow deleting default categories
+    if (DEFAULT_CATEGORIES.find(c => c.id === id)) return
+    const updated = get().customCategories.filter(c => c.id !== id)
+    saveCategories(updated)
+    set({ customCategories: updated })
+  },
+  getAllCategories: () => {
+    return [...DEFAULT_CATEGORIES, ...get().customCategories]
   },
 
   forgeStats: loadStats(FORGE_STATS_KEY),
