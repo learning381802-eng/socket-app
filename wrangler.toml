@@ -1,0 +1,13 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "socket-chat"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "./dist"
+
+# Automatically place your workdir in an isol
+[site]
+bucket = "./dist"
+
+# Environment variables (add your Supabase credentials here or in Cloudflare Dashboard)
+# [vars]
+# VITE_SUPABASE_URL = "your-supabase-url"
+# VITE_SUPABASE_ANON_KEY = "your-supabase-anon-key"
