@@ -109,10 +109,9 @@ export default function ChatLayout() {
         {/* Main panel */}
         <div className={`chat-main ${sidebarCollapsed ? 'chat-main-centered' : ''}`}>
           <Routes>
-            <Route path="/" element={<WelcomePanel />} />
-            <Route path="/socket" element={<WelcomePanel />} />
-            <Route path="/socket/mentions" element={<MentionsPage />} />
-            <Route path="/socket/starred" element={<StarredPage />} />
+            <Route index element={<WelcomePanel />} />
+            <Route path="mentions" element={<MentionsPage />} />
+            <Route path="starred" element={<StarredPage />} />
             <Route path="dm/:id" element={<MainPanel />} />
             <Route path="space/:id" element={<MainPanel />} />
             <Route path="group/:id" element={<MainPanel />} />

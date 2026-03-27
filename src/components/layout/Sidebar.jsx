@@ -95,6 +95,7 @@ export default function Sidebar() {
           <NavItem
             icon={<AtSign size={18} />}
             label="Mentions"
+            active={location.pathname.includes('/mentions')}
             badge={useStore.getState().mentions.filter(m => !m.read).length}
             onClick={() => { navigate('/socket/mentions'); setActiveView('mentions') }}
             collapsed={isCollapsed}
@@ -102,6 +103,7 @@ export default function Sidebar() {
           <NavItem
             icon={<Star size={18} />}
             label="Starred"
+            active={location.pathname.includes('/starred')}
             onClick={() => { navigate('/socket/starred'); setActiveView('starred') }}
             collapsed={isCollapsed}
           />
