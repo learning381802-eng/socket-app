@@ -1,7 +1,7 @@
-import { useEffect, useCallback } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { useEffect, useCallback, useRef } from 'react'
+import { Routes, Route, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store'
-import { supabase, getConversations, subscribeToPresence } from '../lib/supabase'
+import { supabase, getConversations, subscribeToPresence, createDM } from '../lib/supabase'
 import GlobalHeader from '../components/layout/GlobalHeader'
 import Sidebar from '../components/layout/Sidebar'
 import MainPanel from '../components/chat/MainPanel'
@@ -14,9 +14,13 @@ import MentionsPage from './MentionsPage'
 import StarredPage from './StarredPage'
 
 export default function ChatLayout() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const resolvingDeepLinkRef = useRef(false)
   const {
     user, setConversations, addConversation, rightPanelOpen,
-    sidebarCollapsed, setOnlineUsers, searchOpen, modal, setActiveView, activeView,
+    sidebarCollapsed, setOnlineUsers, searchOpen, modal,
+    setActiveConversation, addNotification,
   } = useStore()
 
   // Load conversations
@@ -65,6 +69,33 @@ export default function ChatLayout() {
     }
   }, [user])
 
+  // Support deep-linking from Discover "Message" buttons (?userId=<id>)
+  useEffect(() => {
+    const targetUserId = searchParams.get('userId')
+    if (!user || !targetUserId || resolvingDeepLinkRef.current) return
+    if (targetUserId === user.id) {
+      setSearchParams({}, { replace: true })
+      return
+    }
+
+    resolvingDeepLinkRef.current = true
+    const run = async () => {
+      try {
+        const conv = await createDM(user.id, targetUserId)
+        if (!conv?.id) throw new Error('Unable to open conversation')
+        addConversation(conv)
+        setActiveConversation(conv)
+        navigate(`/socket/dm/${conv.id}`, { replace: true })
+      } catch (err) {
+        addNotification({ type: 'error', message: 'Could not start chat with that person.' })
+        setSearchParams({}, { replace: true })
+      } finally {
+        resolvingDeepLinkRef.current = false
+      }
+    }
+    run()
+  }, [user, searchParams, navigate, setSearchParams, addConversation, setActiveConversation, addNotification])
+
   return (
     <div className="chat-layout">
       {/* Global Header */}
@@ -78,10 +109,9 @@ export default function ChatLayout() {
         {/* Main panel */}
         <div className={`chat-main ${sidebarCollapsed ? 'chat-main-centered' : ''}`}>
           <Routes>
-            <Route path="/" element={<WelcomePanel />} />
-            <Route path="/socket" element={<WelcomePanel />} />
-            <Route path="/socket/mentions" element={<MentionsPage />} />
-            <Route path="/socket/starred" element={<StarredPage />} />
+            <Route index element={<WelcomePanel />} />
+            <Route path="mentions" element={<MentionsPage />} />
+            <Route path="starred" element={<StarredPage />} />
             <Route path="dm/:id" element={<MainPanel />} />
             <Route path="space/:id" element={<MainPanel />} />
             <Route path="group/:id" element={<MainPanel />} />

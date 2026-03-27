@@ -9,7 +9,7 @@ import EmojiPicker from 'emoji-picker-react'
 import { useStore } from '../../store'
 import { sendMessage, uploadFile, supabase } from '../../lib/supabase'
 
-export default function MessageComposer({ conversationId }) {
+export default function MessageComposer({ conversationId, placeholder = 'Message' }) {
   const { user, addOptimisticMessage, confirmMessage, addNotification, setTypingUser, setModal } = useStore()
   const [content, setContent] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
@@ -212,7 +212,7 @@ export default function MessageComposer({ conversationId }) {
           }}
           onFocus={() => setShowFormatToolbar(true)}
           onBlur={() => setTimeout(() => setShowFormatToolbar(false), 200)}
-          placeholder="Type a message"
+          placeholder={placeholder}
           className="composer-textarea"
           rows={1}
         />
