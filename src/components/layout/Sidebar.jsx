@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, AtSign, Star, MessageSquare, Hash, Users, Video,
-  Plus, ChevronDown, ChevronRight, Compass, Bot, Sparkles,
+  Plus, ChevronDown, ChevronRight, Compass, Bot, Search, PenSquare,
   PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
 import { useStore } from '../../store'
@@ -15,16 +15,20 @@ export default function Sidebar() {
   const location = useLocation()
   const {
     user, conversations, activeConversation, setActiveConversation,
-    sidebarCollapsed, setSidebarCollapsed, setModal,
+    sidebarCollapsed, setSidebarCollapsed, setModal, setActiveView,
     onlineUsers,
   } = useStore()
 
   const [dmExpanded, setDmExpanded] = useState(true)
   const [spacesExpanded, setSpacesExpanded] = useState(true)
   const [meetingsExpanded, setMeetingsExpanded] = useState(false)
+  const [chatQuery, setChatQuery] = useState('')
 
   const dms = conversations.filter((c) => c.type === 'dm' || c.type === 'group')
   const spaces = conversations.filter((c) => c.type === 'space')
+  const normalizedQuery = chatQuery.trim().toLowerCase()
+  const filteredDms = dms.filter((c) => (c.name || '').toLowerCase().includes(normalizedQuery))
+  const filteredSpaces = spaces.filter((c) => (c.name || '').toLowerCase().includes(normalizedQuery))
 
   const handleConvClick = (conv) => {
     setActiveConversation(conv)
@@ -56,6 +60,29 @@ export default function Sidebar() {
 
       {/* Navigation Sections */}
       <nav className="sidebar-nav">
+        {!isCollapsed && (
+          <div className="sidebar-primary-actions">
+            <button
+              onClick={openNewChat}
+              className="sidebar-new-chat-btn"
+            >
+              <PenSquare size={16} />
+              <span>New chat</span>
+            </button>
+
+            <div className="sidebar-chat-filter">
+              <Search size={14} />
+              <input
+                type="text"
+                value={chatQuery}
+                onChange={(e) => setChatQuery(e.target.value)}
+                placeholder="Find a chat"
+                aria-label="Find a chat"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Top Tier - System Folders */}
         <div className="sidebar-section">
           <NavItem
@@ -107,8 +134,10 @@ export default function Sidebar() {
             >
               {dms.length === 0 ? (
                 <p className="sidebar-empty">No direct messages yet</p>
+              ) : filteredDms.length === 0 ? (
+                <p className="sidebar-empty">No matches for “{chatQuery}”</p>
               ) : (
-                dms.map((conv) => (
+                filteredDms.map((conv) => (
                   <ConvItem
                     key={conv.id}
                     conv={conv}
@@ -143,8 +172,10 @@ export default function Sidebar() {
                 >
                   {spaces.length === 0 ? (
                     <p className="sidebar-empty">No spaces yet</p>
+                  ) : filteredSpaces.length === 0 ? (
+                    <p className="sidebar-empty">No matches for “{chatQuery}”</p>
                   ) : (
-                    spaces.map((conv) => (
+                    filteredSpaces.map((conv) => (
                       <ConvItem
                         key={conv.id}
                         conv={conv}
