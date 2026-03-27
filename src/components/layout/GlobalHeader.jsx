@@ -19,7 +19,7 @@ export default function GlobalHeader() {
   const {
     user, sidebarCollapsed, setSidebarCollapsed,
     theme, toggleTheme, searchOpen, setSearchOpen,
-    setRightPanelOpen, rightPanelOpen,
+    setRightPanelOpen, rightPanelOpen, setModal,
   } = useStore()
 
   const [status, setStatus] = useState('active')
