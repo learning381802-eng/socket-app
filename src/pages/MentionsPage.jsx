@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { AtSign, Check, CheckCheck, ExternalLink, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
 import Avatar from '../components/ui/Avatar'
 
 export default function MentionsPage() {
-  const { mentions, markMentionRead, markAllMentionsRead, setActiveView } = useStore()
+  const navigate = useNavigate()
+  const { mentions, markMentionRead, markAllMentionsRead, setActiveView, conversations, setActiveConversation } = useStore()
   const [selectedMention, setSelectedMention] = useState(null)
 
   const unreadCount = mentions.filter((m) => !m.read).length
@@ -13,7 +15,14 @@ export default function MentionsPage() {
   const handleMentionClick = (mention) => {
     markMentionRead(mention.id)
     setSelectedMention(mention)
-    // In a real app, this would navigate to the conversation
+  }
+
+  const openMentionConversation = (mention) => {
+    const conv = conversations.find((c) => c.id === mention.conversationId)
+    if (!conv) return
+    setActiveConversation(conv)
+    const prefix = conv.type === 'space' ? 'space' : conv.type === 'group' ? 'group' : 'dm'
+    navigate(`/socket/${prefix}/${conv.id}`)
   }
 
   const handleDeleteMention = (e, id) => {
@@ -39,7 +48,7 @@ export default function MentionsPage() {
       {/* Header */}
       <div className="mentions-header">
         <div className="mentions-header-left">
-          <button onClick={() => setActiveView('home')} className="mentions-back-btn">
+          <button onClick={() => { setActiveView('home'); navigate('/socket') }} className="mentions-back-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
@@ -90,7 +99,11 @@ export default function MentionsPage() {
                 </div>
                 <p className="mention-text">{mention.content}</p>
                 <div className="mention-actions">
-                  <button className="mention-action-btn" data-tooltip="Jump to message">
+                  <button
+                    className="mention-action-btn"
+                    data-tooltip="Jump to message"
+                    onClick={(e) => { e.stopPropagation(); openMentionConversation(mention) }}
+                  >
                     <ExternalLink size={16} />
                     <span>Jump to message</span>
                   </button>
