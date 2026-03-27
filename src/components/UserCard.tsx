@@ -5,15 +5,21 @@ import { DiscoverUser, STATUS_COLORS } from '../data/users'
 
 interface Props {
   user: DiscoverUser
+  onMessage?: (user: DiscoverUser) => void
+  disabled?: boolean
 }
 
-export default function UserCard({ user }: Props) {
+export default function UserCard({ user, onMessage, disabled = false }: Props) {
   const navigate = useNavigate()
   const initial = user.displayName?.[0]?.toUpperCase() || '?'
   const status = user.status || 'offline'
 
   const handleMessage = () => {
-    // Navigate to chat with this user
+    if (onMessage) {
+      onMessage(user)
+      return
+    }
+    // Fallback: deep-link to chat with this user
     navigate(`/socket?userId=${user.id}`)
   }
 
@@ -66,11 +72,12 @@ export default function UserCard({ user }: Props) {
           whileTap={{ scale: 0.98 }}
           className="uc-message-btn"
           onClick={handleMessage}
+          disabled={disabled}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
           </svg>
-          Message
+          {disabled ? 'Opening…' : 'Message'}
         </motion.button>
       </div>
     </motion.div>

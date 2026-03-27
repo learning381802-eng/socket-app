@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Search, Users, Hash, Check, Plus, Mail, UserPlus } from 'lucide-react'
+import { X, Search, Users, Hash, Check, Plus, Mail, UserPlus, Inbox } from 'lucide-react'
 import { useStore } from '../../store'
-import { searchUsers, createDM, createSpace, supabase } from '../../lib/supabase'
+import {
+  searchUsers,
+  createDM,
+  createSpace,
+  createChatInvite,
+  getIncomingChatInvites,
+  markChatInviteAccepted,
+  supabase,
+} from '../../lib/supabase'
 import Avatar from '../ui/Avatar'
 import { useNavigate } from 'react-router-dom'
 
@@ -15,6 +23,9 @@ export default function NewChatModal() {
   const [spaceName, setSpaceName] = useState('')
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [activeTab, setActiveTab] = useState('people')
+  const [incomingInvites, setIncomingInvites] = useState([])
+  const [loadingInvites, setLoadingInvites] = useState(false)
 
   const isNewChat = modal === 'new-chat'
   const isNewSpace = modal === 'new-space'
@@ -27,8 +38,26 @@ export default function NewChatModal() {
       setResults([])
       setSelected([])
       setSpaceName('')
+      setActiveTab('people')
+      setIncomingInvites([])
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isNewChat || activeTab !== 'invites') return
+    loadIncomingInvites()
+  }, [isNewChat, activeTab, user?.email])
+
+  const loadIncomingInvites = async () => {
+    if (!user?.email) return
+    setLoadingInvites(true)
+    try {
+      const { data } = await getIncomingChatInvites(user.email)
+      setIncomingInvites(data || [])
+    } finally {
+      setLoadingInvites(false)
+    }
+  }
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return }
@@ -94,12 +123,14 @@ export default function NewChatModal() {
           setModal(null)
         }
       } else {
-        // User doesn't exist - show notification that we'll invite them
-        addNotification({
-          type: 'info',
-          message: `We'll invite ${query} when they sign up!`,
+        // User doesn't exist - persist invite so they can see it after signup
+        const { error: inviteError } = await createChatInvite({
+          invitedEmail: query.trim(),
+          invitedBy: user.id,
+          inviterName: user.user_metadata?.display_name || user.email,
         })
-        // For now, just close - in production you'd send an invite email
+        if (inviteError) throw inviteError
+        addNotification({ type: 'success', message: `Invite sent to ${query}` })
         setModal(null)
       }
     } catch (err) {
@@ -168,6 +199,25 @@ export default function NewChatModal() {
   const title = isNewSpace ? 'Create a Space' : isNewGroup ? 'New Group Message' : 'New Message'
   const placeholder = isNewSpace ? 'Search people to invite...' : 'Search by name or email...'
 
+  const acceptInvite = async (invite) => {
+    if (!user?.id || loading) return
+    setLoading(true)
+    try {
+      const conv = await createDM(user.id, invite.invited_by)
+      if (!conv?.id) throw new Error('Could not create chat from invite')
+      await markChatInviteAccepted(invite.id, user.id)
+      addConversation(conv)
+      setActiveConversation(conv)
+      setIncomingInvites((prev) => prev.filter((i) => i.id !== invite.id))
+      setModal(null)
+      navigate(`/socket/dm/${conv.id}`)
+    } catch (err) {
+      addNotification({ type: 'error', message: err.message || 'Failed to accept invite' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -206,6 +256,26 @@ export default function NewChatModal() {
               </div>
 
               <div className="px-6 pb-6 space-y-4">
+                {isNewChat && (
+                  <div className="new-chat-tabs">
+                    <button
+                      className={`new-chat-tab ${activeTab === 'people' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('people')}
+                    >
+                      <Search size={14} />
+                      <span>People</span>
+                    </button>
+                    <button
+                      className={`new-chat-tab ${activeTab === 'invites' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('invites')}
+                    >
+                      <Inbox size={14} />
+                      <span>Invites</span>
+                      {incomingInvites.length > 0 && <span className="new-chat-tab-badge">{incomingInvites.length}</span>}
+                    </button>
+                  </div>
+                )}
+
                 {/* Space name input */}
                 {isNewSpace && (
                   <div>
@@ -228,6 +298,7 @@ export default function NewChatModal() {
                 )}
 
                 {/* Search */}
+                {(!isNewChat || activeTab === 'people') && (
                 <div>
                   {isNewSpace && (
                     <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text-muted)' }}>
@@ -250,9 +321,10 @@ export default function NewChatModal() {
                     )}
                   </div>
                 </div>
+                )}
 
                 {/* Selected chips */}
-                {selected.length > 0 && (
+                {(!isNewChat || activeTab === 'people') && selected.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {selected.map((u) => (
                       <div key={u.id} className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full text-xs font-medium"
@@ -268,6 +340,7 @@ export default function NewChatModal() {
                 )}
 
                 {/* Results */}
+                {(!isNewChat || activeTab === 'people') && (
                 <AnimatePresence>
                   {results.length > 0 && (
                     <motion.div
@@ -306,9 +379,10 @@ export default function NewChatModal() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+                )}
 
                 {/* Email invite option */}
-                {isEmailQuery && (
+                {(!isNewChat || activeTab === 'people') && isEmailQuery && (
                   <motion.button
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -333,12 +407,38 @@ export default function NewChatModal() {
                 )}
 
                 {/* No results message */}
-                {query.trim() && results.length === 0 && !isEmailQuery && !searching && (
+                {(!isNewChat || activeTab === 'people') && query.trim() && results.length === 0 && !isEmailQuery && !searching && (
                   <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
                     <Users size={32} className="mx-auto mb-3 opacity-30" />
                     <p className="text-sm">No users found matching "{query}"</p>
                     {emailRegex.test(query) && (
                       <p className="text-xs mt-2">Try entering the email to send an invite</p>
+                    )}
+                  </div>
+                )}
+
+                {isNewChat && activeTab === 'invites' && (
+                  <div className="new-chat-invites">
+                    {loadingInvites ? (
+                      <p className="new-chat-invites-empty">Loading invites…</p>
+                    ) : incomingInvites.length === 0 ? (
+                      <p className="new-chat-invites-empty">No pending invites.</p>
+                    ) : (
+                      incomingInvites.map((invite) => (
+                        <div key={invite.id} className="new-chat-invite-item">
+                          <div className="new-chat-invite-content">
+                            <p className="new-chat-invite-title">Invite from {invite.inviter_name || invite.invited_by}</p>
+                            <p className="new-chat-invite-subtitle">{new Date(invite.created_at).toLocaleString()}</p>
+                          </div>
+                          <button
+                            onClick={() => acceptInvite(invite)}
+                            className="new-chat-invite-accept"
+                            disabled={loading}
+                          >
+                            Accept
+                          </button>
+                        </div>
+                      ))
                     )}
                   </div>
                 )}

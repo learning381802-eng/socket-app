@@ -107,6 +107,46 @@ export const createSpace = async (name, creatorId) => {
   return { data: conv }
 }
 
+export const createChatInvite = async ({ invitedEmail, invitedBy, inviterName = '' }) => {
+  const normalizedEmail = String(invitedEmail || '').trim().toLowerCase()
+  if (!normalizedEmail) return { error: new Error('Invite email is required') }
+
+  const { data, error } = await supabase
+    .from('chat_invites')
+    .insert({
+      invited_email: normalizedEmail,
+      invited_by: invitedBy,
+      inviter_name: inviterName,
+      status: 'pending',
+    })
+    .select('*')
+    .single()
+  return { data, error }
+}
+
+export const getIncomingChatInvites = async (email) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  if (!normalizedEmail) return { data: [], error: null }
+
+  const { data, error } = await supabase
+    .from('chat_invites')
+    .select('id, invited_email, invited_by, inviter_name, status, created_at')
+    .eq('invited_email', normalizedEmail)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  return { data, error }
+}
+
+export const markChatInviteAccepted = async (inviteId, acceptedBy) => {
+  const { data, error } = await supabase
+    .from('chat_invites')
+    .update({ status: 'accepted', accepted_by: acceptedBy, accepted_at: new Date().toISOString() })
+    .eq('id', inviteId)
+    .select('*')
+    .single()
+  return { data, error }
+}
+
 export const searchUsers = async (query) => {
   // Search by both display_name and email
   const { data, error } = await supabase

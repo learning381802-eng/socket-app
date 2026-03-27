@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { supabase, searchUsers } from '../lib/supabase'
+import { supabase, searchUsers, createDM } from '../lib/supabase'
 import { useStore } from '../store'
 import { DiscoverUser } from '../data/users'
 import UserCard from '../components/UserCard'
@@ -10,12 +10,13 @@ import SearchBar from '../components/SearchBar'
 
 export default function DiscoverPage() {
   const navigate = useNavigate()
-  const { user } = useStore()
+  const { user, addConversation, setActiveConversation } = useStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'away' | 'offline'>('all')
   const [users, setUsers] = useState<DiscoverUser[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [startingChatUserId, setStartingChatUserId] = useState('')
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
@@ -66,6 +67,27 @@ export default function DiscoverPage() {
   }, [users, statusFilter])
 
   const onlineCount = users.filter((u) => u.status === 'online' || u.status === 'active').length
+
+  const handleStartChat = async (targetUser: DiscoverUser) => {
+    if (!targetUser?.id) return
+    if (!user?.id) {
+      navigate(`/socket?userId=${targetUser.id}`)
+      return
+    }
+
+    setStartingChatUserId(targetUser.id)
+    try {
+      const conv = await createDM(user.id, targetUser.id)
+      if (!conv?.id) throw new Error('Unable to start chat')
+      addConversation(conv)
+      setActiveConversation(conv)
+      navigate(`/socket/dm/${conv.id}`)
+    } catch (err: any) {
+      setLoadError(err?.message || 'Could not start chat with this user')
+    } finally {
+      setStartingChatUserId('')
+    }
+  }
 
   return (
     <div className="disc-root">
@@ -186,7 +208,11 @@ export default function DiscoverPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03, duration: 0.2 }}
                 >
-                  <UserCard user={user} />
+                  <UserCard
+                    user={user}
+                    onMessage={handleStartChat}
+                    disabled={startingChatUserId === user.id}
+                  />
                 </motion.div>
               ))}
             </div>
