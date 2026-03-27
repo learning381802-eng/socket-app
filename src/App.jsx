@@ -55,18 +55,6 @@ export default function App() {
 
         {/* Hidden chat — only accessible after "everyone" trigger */}
         <Route
-          path="/socket"
-          element={
-            <StealthRouteGuard>
-              <Suspense fallback={<ChatLoader />}>
-                <div style={{ height: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-                  {user ? <ModuleCore /> : <StreamAuth />}
-                </div>
-              </Suspense>
-            </StealthRouteGuard>
-          }
-        />
-        <Route
           path="/socket/*"
           element={
             <StealthRouteGuard>
