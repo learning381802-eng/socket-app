@@ -1,28 +1,121 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Search, Hash, Users, Lock, Globe, Plus, Star } from 'lucide-react'
+import { X, Search, Hash, Users, Plus, ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
-
-const SPACES = [
-  { id: 1, name: 'Engineering Team', description: 'Main engineering discussions', members: 24, type: 'public', joined: false },
-  { id: 2, name: 'Product Updates', description: 'Latest product announcements', members: 156, type: 'public', joined: false },
-  { id: 3, name: 'Design System', description: 'UI/UX design collaboration', members: 18, type: 'public', joined: true },
-  { id: 4, name: 'Random', description: 'Off-topic conversations', members: 89, type: 'public', joined: false },
-  { id: 5, name: 'Project Alpha', description: 'Confidential project discussions', members: 8, type: 'private', joined: false },
-  { id: 6, name: 'Marketing', description: 'Marketing team coordination', members: 32, type: 'public', joined: false },
-]
+import { supabase } from '../../lib/supabase'
 
 export default function BrowseSpacesModal() {
-  const { setModal } = useStore()
+  const navigate = useNavigate()
+  const { setModal, user, addConversation, setActiveConversation } = useStore()
   const [searchQuery, setSearchQuery] = useState('')
-  const [filter, setFilter] = useState('all') // all, public, private
+  const [filter, setFilter] = useState('all') // all, joined, available
+  const [spaces, setSpaces] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [joiningId, setJoiningId] = useState(null)
+  const [loadError, setLoadError] = useState('')
 
-  const filteredSpaces = SPACES.filter((space) => {
-    const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      space.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesFilter = filter === 'all' || space.type === filter
-    return matchesSearch && matchesFilter
-  })
+  useEffect(() => {
+    if (!user) return
+
+    const loadSpaces = async () => {
+      setLoading(true)
+      setLoadError('')
+      try {
+        const { data: allSpaces, error: spaceErr } = await supabase
+          .from('conversations')
+          .select('id, name, created_at')
+          .eq('type', 'space')
+          .order('created_at', { ascending: false })
+        if (spaceErr) throw spaceErr
+
+        if (!allSpaces?.length) {
+          setSpaces([])
+          return
+        }
+
+        const ids = allSpaces.map((s) => s.id)
+        const { data: memberships, error: memberErr } = await supabase
+          .from('memberships')
+          .select('conversation_id, user_id')
+          .in('conversation_id', ids)
+        if (memberErr) throw memberErr
+
+        const summary = new Map()
+        ;(memberships || []).forEach((row) => {
+          const prev = summary.get(row.conversation_id) || { members: 0, joined: false }
+          prev.members += 1
+          if (row.user_id === user.id) prev.joined = true
+          summary.set(row.conversation_id, prev)
+        })
+
+        setSpaces(allSpaces.map((space) => {
+          const meta = summary.get(space.id) || { members: 0, joined: false }
+          return {
+            id: space.id,
+            name: space.name || 'Untitled Space',
+            description: `Created ${new Date(space.created_at).toLocaleDateString()}`,
+            members: meta.members,
+            joined: meta.joined,
+            type: 'space',
+          }
+        }))
+      } catch (err) {
+        setLoadError(err.message || 'Could not load spaces')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSpaces()
+  }, [user])
+
+  const filteredSpaces = useMemo(() => {
+    return spaces.filter((space) => {
+      const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        space.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'joined' && space.joined) ||
+        (filter === 'available' && !space.joined)
+      return matchesSearch && matchesFilter
+    })
+  }, [spaces, searchQuery, filter])
+
+  const openSpace = (space) => {
+    const conv = { id: space.id, name: space.name, type: 'space' }
+    addConversation(conv)
+    setActiveConversation(conv)
+    setModal(null)
+    navigate(`/socket/space/${space.id}`)
+  }
+
+  const handleJoin = async (space) => {
+    if (!user || joiningId) return
+    if (space.joined) {
+      openSpace(space)
+      return
+    }
+
+    setJoiningId(space.id)
+    try {
+      const { error } = await supabase.from('memberships').insert({
+        user_id: user.id,
+        conversation_id: space.id,
+        role: 'member',
+      })
+      if (error) throw error
+
+      setSpaces((prev) => prev.map((s) =>
+        s.id === space.id ? { ...s, joined: true, members: s.members + 1 } : s
+      ))
+      openSpace({ ...space, joined: true })
+    } catch (err) {
+      setLoadError(err.message || 'Failed to join space')
+    } finally {
+      setJoiningId(null)
+    }
+  }
 
   return (
     <div className="modal-backdrop" onClick={() => setModal(null)}>
@@ -34,18 +127,16 @@ export default function BrowseSpacesModal() {
         transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="modal-header">
           <div>
             <h2 className="modal-title">Browse Spaces</h2>
-            <p className="modal-subtitle">Discover and join public spaces</p>
+            <p className="modal-subtitle">Discover and join team spaces</p>
           </div>
           <button onClick={() => setModal(null)} className="modal-close-btn">
             <X size={20} />
           </button>
         </div>
 
-        {/* Search and Filter */}
         <div className="browse-spaces-search">
           <Search size={18} className="browse-spaces-search-icon" />
           <input
@@ -62,30 +153,29 @@ export default function BrowseSpacesModal() {
             onClick={() => setFilter('all')}
             className={`browse-spaces-filter ${filter === 'all' ? 'active' : ''}`}
           >
-            All Spaces
+            All
           </button>
           <button
-            onClick={() => setFilter('public')}
-            className={`browse-spaces-filter ${filter === 'public' ? 'active' : ''}`}
+            onClick={() => setFilter('joined')}
+            className={`browse-spaces-filter ${filter === 'joined' ? 'active' : ''}`}
           >
-            <Globe size={14} />
-            Public
+            Joined
           </button>
           <button
-            onClick={() => setFilter('private')}
-            className={`browse-spaces-filter ${filter === 'private' ? 'active' : ''}`}
+            onClick={() => setFilter('available')}
+            className={`browse-spaces-filter ${filter === 'available' ? 'active' : ''}`}
           >
-            <Lock size={14} />
-            Private
+            Available
           </button>
         </div>
 
-        {/* Spaces List */}
+        {loadError && <p className="browse-spaces-error">{loadError}</p>}
+
         <div className="browse-spaces-list">
-          {filteredSpaces.map((space) => (
+          {!loading && filteredSpaces.map((space) => (
             <div key={space.id} className="browse-space-item">
               <div className="browse-space-icon">
-                {space.type === 'private' ? <Lock size={18} /> : <Globe size={18} />}
+                <Hash size={18} />
               </div>
               <div className="browse-space-content">
                 <div className="browse-space-header">
@@ -103,21 +193,22 @@ export default function BrowseSpacesModal() {
                     <Users size={14} />
                     {space.members} members
                   </span>
-                  <span className="browse-space-type">{space.type}</span>
                 </div>
               </div>
               <button
                 className={`browse-space-action ${space.joined ? 'joined' : ''}`}
+                onClick={() => handleJoin(space)}
+                disabled={joiningId === space.id}
               >
                 {space.joined ? (
                   <>
-                    <Star size={16} />
-                    <span>Joined</span>
+                    <ArrowRight size={16} />
+                    <span>Open</span>
                   </>
                 ) : (
                   <>
                     <Plus size={16} />
-                    <span>Join</span>
+                    <span>{joiningId === space.id ? 'Joining…' : 'Join'}</span>
                   </>
                 )}
               </button>
@@ -125,7 +216,13 @@ export default function BrowseSpacesModal() {
           ))}
         </div>
 
-        {filteredSpaces.length === 0 && (
+        {loading && (
+          <div className="browse-spaces-empty">
+            <h3>Loading spaces…</h3>
+          </div>
+        )}
+
+        {!loading && filteredSpaces.length === 0 && (
           <div className="browse-spaces-empty">
             <Hash size={48} className="browse-spaces-empty-icon" />
             <h3>No spaces found</h3>
