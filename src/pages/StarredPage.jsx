@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Star, ExternalLink, Trash2, MessageSquare } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Star, ExternalLink, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
 import Avatar from '../components/ui/Avatar'
 
 export default function StarredPage() {
-  const { starredMessages, toggleStarMessage, setActiveView } = useStore()
+  const navigate = useNavigate()
+  const { starredMessages, toggleStarMessage, setActiveView, conversations, setActiveConversation } = useStore()
   const [selectedStar, setSelectedStar] = useState(null)
 
   const formatTime = (timestamp) => {
@@ -27,9 +29,12 @@ export default function StarredPage() {
   }
 
   const handleJumpToMessage = (msg) => {
-    // In a real app, this would navigate to the conversation
-    console.log('Jump to message:', msg.id)
+    const conv = conversations.find((c) => c.id === msg.conversationId)
+    if (!conv) return
     setActiveView('chat')
+    setActiveConversation(conv)
+    const prefix = conv.type === 'space' ? 'space' : conv.type === 'group' ? 'group' : 'dm'
+    navigate(`/socket/${prefix}/${conv.id}`)
   }
 
   return (
@@ -37,7 +42,7 @@ export default function StarredPage() {
       {/* Header */}
       <div className="starred-header">
         <div className="starred-header-left">
-          <button onClick={() => setActiveView('home')} className="starred-back-btn">
+          <button onClick={() => { setActiveView('home'); navigate('/socket') }} className="starred-back-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>

@@ -135,41 +135,7 @@ export const useStore = create(
     setMembers: (members) => set({ members }),
 
     // Mentions
-    mentions: [
-      {
-        id: 'mention-1',
-        messageId: 'msg-1',
-        conversationId: 'conv-1',
-        conversationName: 'Engineering Team',
-        senderName: 'Alice Chen',
-        senderAvatar: 'AC',
-        content: 'Hey @you, can you review this PR?',
-        timestamp: Date.now() - 3600000, // 1 hour ago
-        read: false,
-      },
-      {
-        id: 'mention-2',
-        messageId: 'msg-2',
-        conversationId: 'conv-2',
-        conversationName: 'Product Updates',
-        senderName: 'Bob Smith',
-        senderAvatar: 'BS',
-        content: '@you The meeting is at 3pm today',
-        timestamp: Date.now() - 7200000, // 2 hours ago
-        read: false,
-      },
-      {
-        id: 'mention-3',
-        messageId: 'msg-3',
-        conversationId: 'conv-1',
-        conversationName: 'Engineering Team',
-        senderName: 'Carol White',
-        senderAvatar: 'CW',
-        content: 'Thanks @you for the help!',
-        timestamp: Date.now() - 86400000, // 1 day ago
-        read: true,
-      },
-    ],
+    mentions: [],
     markMentionRead: (id) => {
       set((s) => ({
         mentions: s.mentions.map((m) => (m.id === id ? { ...m, read: true } : m)),
@@ -182,28 +148,7 @@ export const useStore = create(
     },
 
     // Starred Messages
-    starredMessages: [
-      {
-        id: 'star-1',
-        conversationId: 'conv-1',
-        conversationName: 'Engineering Team',
-        senderName: 'David Lee',
-        senderAvatar: 'DL',
-        content: 'Here are the API docs: https://api.example.com/docs',
-        timestamp: Date.now() - 172800000, // 2 days ago
-        starredAt: Date.now() - 100000000,
-      },
-      {
-        id: 'star-2',
-        conversationId: 'conv-3',
-        conversationName: 'Design System',
-        senderName: 'Eva Martinez',
-        senderAvatar: 'EM',
-        content: 'New component library is ready for review',
-        timestamp: Date.now() - 259200000, // 3 days ago
-        starredAt: Date.now() - 150000000,
-      },
-    ],
+    starredMessages: [],
 
     // Modal state
     modal: null,
