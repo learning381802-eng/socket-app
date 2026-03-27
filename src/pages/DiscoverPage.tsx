@@ -1,31 +1,71 @@
 // DiscoverPage.tsx - Find people to chat with
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_USERS } from '../data/users'
+import { supabase, searchUsers } from '../lib/supabase'
+import { useStore } from '../store'
+import { DiscoverUser } from '../data/users'
 import UserCard from '../components/UserCard'
 import SearchBar from '../components/SearchBar'
 
 export default function DiscoverPage() {
   const navigate = useNavigate()
+  const { user } = useStore()
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'idle' | 'offline'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'away' | 'offline'>('all')
+  const [users, setUsers] = useState<DiscoverUser[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      setLoading(true)
+      setLoadError('')
+      try {
+        let data: any[] = []
+        if (searchQuery.trim()) {
+          const searched = await searchUsers(searchQuery.trim())
+          data = searched.data || []
+        } else {
+          const { data: fetched, error } = await supabase
+            .from('users')
+            .select('id, display_name, email, avatar_url, bio, status')
+            .limit(100)
+          if (error) throw error
+          data = fetched || []
+        }
+
+        const mapped = data
+          .filter((row) => row.id !== user?.id)
+          .map((row) => ({
+            id: row.id,
+            displayName: row.display_name || row.email || 'Unknown user',
+            email: row.email,
+            avatarUrl: row.avatar_url,
+            bio: row.bio || '',
+            status: row.status || 'offline',
+          }))
+
+        setUsers(mapped)
+      } catch (err: any) {
+        setUsers([])
+        setLoadError(err?.message || 'Failed to load people')
+      } finally {
+        setLoading(false)
+      }
+    }, 250)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, user?.id])
 
   const filteredUsers = useMemo(() => {
-    return MOCK_USERS.filter((user) => {
-      // Filter by search query
-      const matchesSearch = searchQuery === '' || 
-        user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.bio?.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      // Filter by status
-      const matchesStatus = statusFilter === 'all' || user.status === statusFilter
-      
-      return matchesSearch && matchesStatus
+    return users.filter((person) => {
+      const normalizedStatus = person.status === 'active' ? 'online' : person.status
+      return statusFilter === 'all' || normalizedStatus === statusFilter
     })
-  }, [searchQuery, statusFilter])
+  }, [users, statusFilter])
 
-  const onlineCount = MOCK_USERS.filter(u => u.status === 'online').length
+  const onlineCount = users.filter((u) => u.status === 'online' || u.status === 'active').length
 
   return (
     <div className="disc-root">
@@ -61,7 +101,7 @@ export default function DiscoverPage() {
           
           {/* Status filter pills */}
           <div className="disc-filters">
-            {(['all', 'online', 'idle', 'offline'] as const).map((status) => (
+            {(['all', 'online', 'away', 'offline'] as const).map((status) => (
               <button
                 key={status}
                 className={`disc-filter-pill ${statusFilter === status ? 'active' : ''}`}
@@ -73,7 +113,7 @@ export default function DiscoverPage() {
                   <>
                     <span 
                       className="disc-filter-dot" 
-                      style={{ background: status === 'online' ? '#22c55e' : status === 'idle' ? '#f59e0b' : '#6b7280' }}
+                      style={{ background: status === 'online' ? '#22c55e' : status === 'away' ? '#f59e0b' : '#6b7280' }}
                     />
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </>
@@ -90,14 +130,27 @@ export default function DiscoverPage() {
         <div className="disc-results">
           <div className="disc-results-header">
             <h2 className="disc-results-title">
-              {searchQuery ? 'Search Results' : 'All Users'}
+              {searchQuery ? 'Search Results' : 'People'}
             </h2>
             <span className="disc-results-count">
               {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
             </span>
           </div>
 
-          {filteredUsers.length === 0 ? (
+          {loading ? (
+            <div className="disc-empty">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                <p className="disc-empty-title">Loading people…</p>
+              </motion.div>
+            </div>
+          ) : loadError ? (
+            <div className="disc-empty">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                <p className="disc-empty-title">Could not load people</p>
+                <p className="disc-empty-text">{loadError}</p>
+              </motion.div>
+            </div>
+          ) : filteredUsers.length === 0 ? (
             <div className="disc-empty">
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}

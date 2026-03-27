@@ -1,15 +1,16 @@
 // UserCard.tsx - User card for discover page
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { User, STATUS_COLORS } from '../data/users'
+import { DiscoverUser, STATUS_COLORS } from '../data/users'
 
 interface Props {
-  user: User
+  user: DiscoverUser
 }
 
 export default function UserCard({ user }: Props) {
   const navigate = useNavigate()
-  const initial = user.displayName[0]?.toUpperCase()
+  const initial = user.displayName?.[0]?.toUpperCase() || '?'
+  const status = user.status || 'offline'
 
   const handleMessage = () => {
     // Navigate to chat with this user
@@ -36,20 +37,20 @@ export default function UserCard({ user }: Props) {
           <span
             className="uc-status-dot"
             style={{
-              background: STATUS_COLORS[user.status],
-              boxShadow: `0 0 0 2px var(--bg-primary), ${STATUS_COLORS[user.status]}40 0 0 6px`,
+              background: STATUS_COLORS[status] || STATUS_COLORS.offline,
+              boxShadow: `0 0 0 2px var(--bg-primary), ${(STATUS_COLORS[status] || STATUS_COLORS.offline)}40 0 0 6px`,
             }}
-            title={user.status}
+            title={status}
           />
         </div>
         <span
           className="uc-status-badge"
           style={{
-            background: `${STATUS_COLORS[user.status]}15`,
-            color: STATUS_COLORS[user.status],
+            background: `${(STATUS_COLORS[status] || STATUS_COLORS.offline)}15`,
+            color: STATUS_COLORS[status] || STATUS_COLORS.offline,
           }}
         >
-          {user.status}
+          {status}
         </span>
       </div>
 
@@ -58,17 +59,6 @@ export default function UserCard({ user }: Props) {
         {user.bio && (
           <p className="uc-bio">{user.bio}</p>
         )}
-        
-        <div className="uc-stats">
-          <div className="uc-stat">
-            <span className="uc-stat-value">{user.problemsSolved}</span>
-            <span className="uc-stat-label">Solved</span>
-          </div>
-          <div className="uc-stat">
-            <span className="uc-stat-value">{user.streak} 🔥</span>
-            <span className="uc-stat-label">Streak</span>
-          </div>
-        </div>
       </div>
 
       <div className="uc-footer">
