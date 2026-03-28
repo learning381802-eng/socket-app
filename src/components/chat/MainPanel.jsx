@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Phone, Video, Info, Search, MoreVertical, Hash, Lock,
-  MessageSquare, FileText, CheckSquare, Link as LinkIcon, Sparkles
+  Phone, Video, Info, Search, Hash,
+  MessageSquare, FileText, CheckSquare, Link as LinkIcon
 } from 'lucide-react'
 import { useStore } from '../../store'
-import { getMessages, subscribeToMessages, supabase } from '../../lib/supabase'
+import { getMessages, subscribeToMessages, subscribeToTyping, subscribeToPresence, subscribeToReadReceipts, markMessagesRead, supabase } from '../../lib/supabase'
 import MessageList from './MessageList'
 import MessageComposer from './MessageComposer'
 import Avatar from '../ui/Avatar'
@@ -17,13 +17,16 @@ export default function MainPanel() {
     user, conversations, activeConversation, setActiveConversation,
     messages, setMessages, addMessage, messagesLoading, setMessagesLoading,
     typingUsers, rightPanelOpen, setRightPanelOpen, setRightPanelTab,
-    setMembers, addNotification,
+    setMembers, addNotification, members, setSearchOpen, setOnlineUsers,
   } = useStore()
 
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [activeTab, setActiveTab] = useState('chat')
   const realtimeRef = useRef(null)
+  const typingChannelRef = useRef(null)
+  const presenceChannelRef = useRef(null)
+  const readRef = useRef(null)
 
   // Sync active conversation from URL
   useEffect(() => {
@@ -44,7 +47,6 @@ export default function MainPanel() {
     // Subscribe to realtime messages
     if (realtimeRef.current) realtimeRef.current.unsubscribe()
     realtimeRef.current = subscribeToMessages(id, async (payload) => {
-      // Fetch full message with user data
       const { data } = await supabase
         .from('messages')
         .select('*, users!sender_id (id, display_name, avatar_url, status)')
@@ -55,11 +57,38 @@ export default function MainPanel() {
         if (data.sender_id !== user?.id) {
           const senderName = data.users?.display_name || 'Someone'
           addNotification({ type: 'message', message: `${senderName}: ${String(data.content).slice(0, 60)}` })
+          markMessagesRead(id, user?.id)
         }
       }
     })
 
-    return () => realtimeRef.current?.unsubscribe()
+    typingChannelRef.current?.unsubscribe?.()
+    typingChannelRef.current = subscribeToTyping(id, ({ payload }) => {
+      if (payload?.user_id && payload.user_id !== user?.id) {
+        useStore.getState().setTypingUser(id, payload.user_id, true)
+        setTimeout(() => useStore.getState().setTypingUser(id, payload.user_id, false), 1800)
+      }
+    })
+
+    presenceChannelRef.current?.unsubscribe?.()
+    presenceChannelRef.current = subscribeToPresence(`presence:${id}`, user?.id, () => {
+      const state = presenceChannelRef.current?.presenceState?.() || {}
+      const online = {}
+      Object.values(state).flat().forEach((entry) => {
+        if (entry?.user_id) online[entry.user_id] = true
+      })
+      useStore.getState().setOnlineUsers(online)
+    })
+
+    readRef.current?.unsubscribe?.()
+    readRef.current = subscribeToReadReceipts(id, () => {})
+
+    return () => {
+      realtimeRef.current?.unsubscribe?.()
+      typingChannelRef.current?.unsubscribe?.()
+      presenceChannelRef.current?.unsubscribe?.()
+      readRef.current?.unsubscribe?.()
+    }
   }, [id])
 
   const loadMessages = async (convId, offset = 0) => {
@@ -94,6 +123,7 @@ export default function MainPanel() {
   const convName = conv?.name || 'Unknown'
   const typing = typingUsers[id] || {}
   const typingNames = Object.keys(typing)
+  const memberCount = members.length
 
   const openInfo = (tab = 'members') => {
     setRightPanelTab(tab)
@@ -122,7 +152,7 @@ export default function MainPanel() {
           <div className="header-info">
             <h2 className="header-title">{convName}</h2>
             <p className="header-subtitle">
-              {isSpace ? 'Space' : conv?.type === 'group' ? 'Group chat' : 'Direct message'}
+              {isSpace ? `${memberCount || 0} members` : conv?.type === 'group' ? 'Group chat' : 'Direct message'}
             </p>
           </div>
         </div>
@@ -145,7 +175,11 @@ export default function MainPanel() {
 
         {/* Actions */}
         <div className="header-actions">
-          <button className="header-action-btn" data-tooltip="Search in conversation">
+          <button
+            className="header-action-btn"
+            data-tooltip="Search in conversation"
+            onClick={() => setSearchOpen(true)}
+          >
             <Search size={18} />
           </button>
           <button className="header-action-btn" data-tooltip="Voice call">
@@ -200,7 +234,10 @@ export default function MainPanel() {
       </AnimatePresence>
 
       {/* Composer */}
-      <MessageComposer conversationId={id} />
+      <MessageComposer
+        conversationId={id}
+        placeholder={isSpace ? `Message ${convName}` : `Message ${convName}`}
+      />
     </div>
   )
 }

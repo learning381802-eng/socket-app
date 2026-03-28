@@ -1,8 +1,7 @@
-// mathStore.ts
 import { create } from 'zustand'
 
-export type Category = 'algebra' | 'geometry' | 'calculus' | 'proof' | string
-export type Difficulty = 'easy' | 'medium' | 'hard'
+export type Category = 'algebra' | 'geometry' | 'calculus' | 'proof' | 'number-theory' | string
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'olympiad'
 export type TrainerType = 'mathforge' | 'theoria'
 
 export interface MathCategory {
@@ -20,31 +19,57 @@ export interface MathProblem {
   type: TrainerType
   category: Category
   title: string
-  problem: string        // LaTeX string
-  answer?: string        // expected answer (optional, for auto-check)
+  problem: string
+  answer?: string
   difficulty: Difficulty
-  hint?: string
-  explanation?: string   // shown after answering
+  tags?: string[]
+  hints?: string[]
+  hint?: string // legacy support
+  explanation?: string
   addedBy?: string
   createdAt?: number
 }
 
-// ── Player progression ────────────────────────────────────────────
 export interface PlayerStats {
   level: number
   xp: number
   streak: number
+  bestStreak: number
   totalAnswered: number
   correct: number
-  seenIds: string[]       // ids seen this session (reset on page reload)
-  allTimeSeenIds: string[] // never repeat across sessions
+  points: number
+  badges: string[]
+  solvedByDifficulty: Record<Difficulty, number>
+  solvedByTag: Record<string, number>
+  solvedProblems: string[]
+  solvedHistory: { id: string; difficulty: Difficulty; solvedAt: string; tags: string[] }[]
+  lastSolvedDate: string | null
+  seenIds: string[]
+  allTimeSeenIds: string[]
 }
 
-const XP_PER_CORRECT = { easy: 10, medium: 20, hard: 35 }
+const XP_PER_CORRECT: Record<Difficulty, number> = { easy: 10, medium: 20, hard: 50, olympiad: 80 }
+const POINTS_PER_SOLVE: Record<Difficulty, number> = { easy: 10, medium: 20, hard: 50, olympiad: 80 }
 const XP_TO_LEVEL = (level: number) => level * 100
 
 function defaultStats(): PlayerStats {
-  return { level: 1, xp: 0, streak: 0, totalAnswered: 0, correct: 0, seenIds: [], allTimeSeenIds: [] }
+  return {
+    level: 1,
+    xp: 0,
+    streak: 0,
+    bestStreak: 0,
+    totalAnswered: 0,
+    correct: 0,
+    points: 0,
+    badges: [],
+    solvedByDifficulty: { easy: 0, medium: 0, hard: 0, olympiad: 0 },
+    solvedByTag: {},
+    solvedProblems: [],
+    solvedHistory: [],
+    lastSolvedDate: null,
+    seenIds: [],
+    allTimeSeenIds: [],
+  }
 }
 
 function loadStats(key: string): PlayerStats {
@@ -56,37 +81,31 @@ function saveStats(key: string, s: PlayerStats) {
   localStorage.setItem(key, JSON.stringify(s))
 }
 
-// ── Default problems ─────────────────────────────────────────────
+function toDateKey(date = new Date()) {
+  return date.toISOString().slice(0, 10)
+}
+
+function getBadgeList(stats: PlayerStats) {
+  const badges = new Set(stats.badges)
+  if (stats.bestStreak >= 5) badges.add('5-day streak')
+  if ((stats.solvedByTag.geometry || 0) >= 5) badges.add('Geometry Master')
+  if ((stats.solvedByDifficulty.hard || 0) + (stats.solvedByDifficulty.olympiad || 0) >= 10) badges.add('Hard Solver')
+  if (stats.points >= 500) badges.add('500 Club')
+  return Array.from(badges)
+}
+
 export const DEFAULT_PROBLEMS: MathProblem[] = [
-  // MathForge — algebra
-  { id: 'mf-a1', type: 'mathforge', category: 'algebra', title: 'Quadratic Roots', problem: 'x^2 - 5x + 6 = 0', answer: 'x=2,3', difficulty: 'easy', hint: 'Factor into two binomials' },
-  { id: 'mf-a2', type: 'mathforge', category: 'algebra', title: 'System of Equations', problem: '2x + 3y = 12,\\quad x - y = 1', answer: 'x=3,y=2', difficulty: 'medium', hint: 'Try substitution: x = y + 1' },
-  { id: 'mf-a3', type: 'mathforge', category: 'algebra', title: 'Polynomial Division', problem: '\\dfrac{x^3 - 8}{x - 2}', answer: 'x^2+2x+4', difficulty: 'hard', hint: 'Factor the numerator as a difference of cubes' },
-  { id: 'mf-a4', type: 'mathforge', category: 'algebra', title: 'Completing the Square', problem: 'x^2 + 6x + 5 = 0', answer: 'x=-1,-5', difficulty: 'easy', hint: 'Move constant, add (b/2)² to both sides' },
-  { id: 'mf-a5', type: 'mathforge', category: 'algebra', title: 'Exponential Equation', problem: '2^{x+1} = 32', answer: 'x=4', difficulty: 'medium', hint: 'Write 32 as a power of 2' },
-  // MathForge — geometry
-  { id: 'mf-g1', type: 'mathforge', category: 'geometry', title: 'Circle Area', problem: 'A = \\pi r^2,\\quad r = 7', answer: '49π', difficulty: 'easy', hint: 'Substitute r = 7' },
-  { id: 'mf-g2', type: 'mathforge', category: 'geometry', title: 'Pythagorean Theorem', problem: 'a^2 + b^2 = c^2,\\quad a=3,\\ b=4', answer: 'c=5', difficulty: 'easy', hint: 'Solve for c' },
-  { id: 'mf-g3', type: 'mathforge', category: 'geometry', title: 'Triangle Area', problem: 'A = \\tfrac{1}{2}bh,\\quad b=10,\\ h=6', answer: '30', difficulty: 'easy', hint: 'Plug values into the formula' },
-  { id: 'mf-g4', type: 'mathforge', category: 'geometry', title: 'Sector Area', problem: 'A = \\tfrac{\\theta}{2\\pi}\\pi r^2,\\quad r=6,\\ \\theta=\\tfrac{\\pi}{3}', answer: '6π', difficulty: 'medium', hint: 'Simplify the fraction first' },
-  { id: 'mf-g5', type: 'mathforge', category: 'geometry', title: 'Volume of Sphere', problem: 'V = \\tfrac{4}{3}\\pi r^3,\\quad r=3', answer: '36π', difficulty: 'medium', hint: 'Cube r first, then multiply' },
-  // MathForge — calculus
-  { id: 'mf-c1', type: 'mathforge', category: 'calculus', title: 'Power Rule', problem: '\\dfrac{d}{dx}\\left[3x^3 - 2x^2 + x - 5\\right]', answer: '9x²-4x+1', difficulty: 'medium', hint: 'Apply power rule to each term' },
-  { id: 'mf-c2', type: 'mathforge', category: 'calculus', title: 'Definite Integral', problem: '\\displaystyle\\int_0^2 (x^2 + 1)\\,dx', answer: '14/3', difficulty: 'medium', hint: 'Integrate then evaluate at x=2 and x=0' },
-  { id: 'mf-c3', type: 'mathforge', category: 'calculus', title: 'Chain Rule', problem: '\\dfrac{d}{dx}\\left[\\sin(x^2+1)\\right]', answer: '2x·cos(x²+1)', difficulty: 'hard', hint: 'Outer function: sin, inner: x²+1' },
-  { id: 'mf-c4', type: 'mathforge', category: 'calculus', title: 'Product Rule', problem: '\\dfrac{d}{dx}\\left[x^2 e^x\\right]', answer: 'xe^x(x+2)', difficulty: 'hard', hint: 'f·g\' + f\'·g' },
-  { id: 'mf-c5', type: 'mathforge', category: 'calculus', title: 'Limit', problem: '\\displaystyle\\lim_{x \\to 0} \\dfrac{\\sin x}{x}', answer: '1', difficulty: 'easy', hint: 'This is a standard limit' },
-  // Theoria — proofs
-  { id: 'th-p1', type: 'theoria', category: 'proof', title: 'Sum of Even Numbers', problem: '\\text{Prove: The sum of two even integers is even.}', difficulty: 'easy', hint: 'Write each even number as 2k and 2m', explanation: 'Let a=2k, b=2m. Then a+b=2(k+m), which is even.' },
-  { id: 'th-p2', type: 'theoria', category: 'proof', title: 'Infinitely Many Primes', problem: '\\text{Prove: There are infinitely many prime numbers.}', difficulty: 'hard', hint: 'Assume finitely many and derive a contradiction (Euclid)', explanation: 'Assume p₁,…,pₙ are all primes. Let N=p₁·…·pₙ+1. N is not divisible by any pᵢ, so it has a new prime factor. Contradiction.' },
-  { id: 'th-p3', type: 'theoria', category: 'proof', title: 'Square Root of 2', problem: '\\text{Prove: }\\sqrt{2}\\text{ is irrational.}', difficulty: 'medium', hint: 'Assume √2 = p/q in lowest terms and derive a contradiction', explanation: 'If √2=p/q then 2q²=p², so p is even. Write p=2k; then 2q²=4k², so q is even. Contradicts lowest terms.' },
-  { id: 'th-p4', type: 'theoria', category: 'proof', title: 'Odd Square', problem: '\\text{Prove: If } n \\text{ is odd, then } n^2 \\text{ is odd.}', difficulty: 'easy', hint: 'Write n = 2k+1 and expand', explanation: 'n=2k+1, so n²=4k²+4k+1=2(2k²+2k)+1, which is odd.' },
-  { id: 'th-p5', type: 'theoria', category: 'proof', title: 'Divisibility by 3', problem: '\\text{Prove: } 3 \\mid n(n+1)(n+2) \\text{ for all integers } n.', difficulty: 'medium', hint: 'Among any 3 consecutive integers, one is divisible by 3', explanation: 'In any 3 consecutive integers, exactly one is ≡0 (mod 3), so their product is divisible by 3.' },
-  { id: 'th-p6', type: 'theoria', category: 'proof', title: 'AM-GM Inequality', problem: '\\text{Prove: } \\dfrac{a+b}{2} \\geq \\sqrt{ab} \\text{ for } a,b \\geq 0.', difficulty: 'medium', hint: 'Start from (√a - √b)² ≥ 0', explanation: '(√a−√b)²≥0 ⟹ a−2√(ab)+b≥0 ⟹ a+b≥2√(ab) ⟹ (a+b)/2≥√(ab).' },
-  { id: 'th-p7', type: 'theoria', category: 'proof', title: "Cantor's Diagonal", problem: '\\text{Prove: The real numbers are uncountable.}', difficulty: 'hard', hint: 'Assume a list of all reals and construct a number not in the list', explanation: 'Given any list r₁,r₂,…, define x whose nth decimal digit differs from the nth digit of rₙ. Then x≠rₙ for all n, so no list is complete.' },
+  { id: 'mf-a1', type: 'mathforge', category: 'algebra', title: 'Quadratic Roots', problem: 'x^2 - 5x + 6 = 0', answer: 'x=2,3', difficulty: 'easy', tags: ['algebra', 'quadratics'], hints: ['Factor into two binomials', 'Look for numbers multiplying to +6 and summing to -5'] },
+  { id: 'mf-a2', type: 'mathforge', category: 'algebra', title: 'System of Equations', problem: '2x + 3y = 12,\\quad x - y = 1', answer: 'x=3,y=2', difficulty: 'medium', tags: ['algebra', 'systems'], hints: ['Try substitution: x = y + 1', 'Replace x in the first equation'] },
+  { id: 'mf-a3', type: 'mathforge', category: 'algebra', title: 'Polynomial Division', problem: '\\dfrac{x^3 - 8}{x - 2}', answer: 'x^2+2x+4', difficulty: 'hard', tags: ['algebra', 'polynomials'], hints: ['Use difference of cubes', 'x^3-8=(x-2)(x^2+2x+4)'] },
+  { id: 'mf-g1', type: 'mathforge', category: 'geometry', title: 'Circle Area', problem: 'A = \\pi r^2,\\quad r = 7', answer: '49π', difficulty: 'easy', tags: ['geometry', 'circles'], hints: ['Substitute r = 7', 'Square the radius first'] },
+  { id: 'mf-g4', type: 'mathforge', category: 'geometry', title: 'Sector Area', problem: 'A = \\tfrac{\\theta}{2\\pi}\\pi r^2,\\quad r=6,\\ \\theta=\\tfrac{\\pi}{3}', answer: '6π', difficulty: 'medium', tags: ['geometry', 'circles'], hints: ['Simplify θ/(2π)', 'Then multiply by πr²'] },
+  { id: 'mf-c3', type: 'mathforge', category: 'calculus', title: 'Chain Rule', problem: '\\dfrac{d}{dx}\\left[\\sin(x^2+1)\\right]', answer: '2x·cos(x²+1)', difficulty: 'hard', tags: ['calculus', 'derivatives'], hints: ['Outer function is sin(u)', 'Multiply by derivative of u=x²+1'] },
+  { id: 'mf-nt1', type: 'mathforge', category: 'number-theory', title: 'Modular Inverse', problem: 'Find x such that 7x \\equiv 1 \\pmod{26}', answer: '15', difficulty: 'olympiad', tags: ['number theory', 'modular arithmetic', 'olympiad'], hints: ['Try small multiples of 7 modulo 26', '7*15=105 and 105 mod 26 = 1'] },
+  { id: 'th-p1', type: 'theoria', category: 'proof', title: 'Sum of Even Numbers', problem: '\\text{Prove: The sum of two even integers is even.}', difficulty: 'easy', tags: ['proof', 'parity'], hints: ['Write each even number as 2k and 2m'], explanation: 'Let a=2k, b=2m. Then a+b=2(k+m), which is even.' },
+  { id: 'th-p2', type: 'theoria', category: 'proof', title: 'Infinitely Many Primes', problem: '\\text{Prove: There are infinitely many prime numbers.}', difficulty: 'hard', tags: ['proof', 'number theory'], hints: ['Assume finitely many primes', 'Build N=p₁p₂...pₙ+1 and derive contradiction'], explanation: 'Assume p₁,…,pₙ are all primes. Let N=p₁·…·pₙ+1. N is not divisible by any pᵢ, so it has a new prime factor. Contradiction.' },
 ]
 
-// ── Storage helpers ───────────────────────────────────────────────
 const CUSTOM_KEY = 'math_custom_problems'
 const CATEGORIES_KEY = 'math_categories'
 const FORGE_STATS_KEY = 'mathforge_stats'
@@ -102,15 +121,14 @@ function loadCategories(): MathCategory[] {
 }
 function saveCategories(cats: MathCategory[]) { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(cats)) }
 
-// Default categories
 export const DEFAULT_CATEGORIES: MathCategory[] = [
   { id: 'algebra', name: 'Algebra', description: 'Equations, polynomials, and functions', color: '#2d6a4f', icon: 'x²', createdAt: 0, problemCount: 0 },
   { id: 'geometry', name: 'Geometry', description: 'Shapes, angles, and spatial relationships', color: '#185fa5', icon: '△', createdAt: 0, problemCount: 0 },
   { id: 'calculus', name: 'Calculus', description: 'Derivatives, integrals, and limits', color: '#9b2226', icon: '∫', createdAt: 0, problemCount: 0 },
+  { id: 'number-theory', name: 'Number Theory', description: 'Divisibility, modular arithmetic, and primes', color: '#a16207', icon: 'ℤ', createdAt: 0, problemCount: 0 },
   { id: 'proof', name: 'Proofs', description: 'Mathematical proofs and logic', color: '#6b3fa0', icon: 'Θ', createdAt: 0, problemCount: 0 },
 ]
 
-// ── Store ─────────────────────────────────────────────────────────
 interface MathStore {
   customProblems: MathProblem[]
   addProblem: (p: Omit<MathProblem, 'id' | 'createdAt'>) => void
@@ -124,7 +142,7 @@ interface MathStore {
 
   forgeStats: PlayerStats
   theoriaStats: PlayerStats
-  recordAnswer: (trainer: TrainerType, problemId: string, correct: boolean, difficulty: Difficulty) => void
+  recordAnswer: (trainer: TrainerType, problem: MathProblem, correct: boolean) => void
   markSeen: (trainer: TrainerType, id: string) => void
   resetSeen: (trainer: TrainerType) => void
 }
@@ -132,7 +150,6 @@ interface MathStore {
 export const useMathStore = create<MathStore>((set, get) => ({
   customProblems: loadCustom(),
   customCategories: loadCategories(),
-
   addProblem: (p) => {
     const n: MathProblem = { ...p, id: 'custom-' + Date.now(), createdAt: Date.now() }
     const updated = [...get().customProblems, n]
@@ -144,62 +161,67 @@ export const useMathStore = create<MathStore>((set, get) => ({
     saveCustom(updated)
     set({ customProblems: updated })
   },
-
   addCategory: (c) => {
-    const newCat: MathCategory = {
-      ...c,
-      id: 'cat-' + Date.now(),
-      createdAt: Date.now(),
-      problemCount: 0,
-    }
+    const newCat: MathCategory = { ...c, id: 'cat-' + Date.now(), createdAt: Date.now(), problemCount: 0 }
     const updated = [...get().customCategories, newCat]
     saveCategories(updated)
     set({ customCategories: updated })
   },
   editCategory: (id, updates) => {
-    const updated = get().customCategories.map(cat =>
-      cat.id === id ? { ...cat, ...updates } : cat
-    )
+    const updated = get().customCategories.map(cat => cat.id === id ? { ...cat, ...updates } : cat)
     saveCategories(updated)
     set({ customCategories: updated })
   },
   deleteCategory: (id) => {
-    // Don't allow deleting default categories
     if (DEFAULT_CATEGORIES.find(c => c.id === id)) return
     const updated = get().customCategories.filter(c => c.id !== id)
     saveCategories(updated)
     set({ customCategories: updated })
   },
-  getAllCategories: () => {
-    return [...DEFAULT_CATEGORIES, ...get().customCategories]
-  },
+  getAllCategories: () => [...DEFAULT_CATEGORIES, ...get().customCategories],
 
   forgeStats: loadStats(FORGE_STATS_KEY),
   theoriaStats: loadStats(THEORIA_STATS_KEY),
 
-  recordAnswer: (trainer, problemId, correct, difficulty) => {
+  recordAnswer: (trainer, problem, correct) => {
     const key = trainer === 'mathforge' ? 'forgeStats' : 'theoriaStats'
     const storageKey = trainer === 'mathforge' ? FORGE_STATS_KEY : THEORIA_STATS_KEY
+    const solvedDate = toDateKey()
     set((s) => {
       const prev = s[key]
-      let xp = prev.xp + (correct ? XP_PER_CORRECT[difficulty] : 0)
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayKey = toDateKey(yesterday)
+      const maintainsStreak = prev.lastSolvedDate === yesterdayKey
+      const streak = correct ? (prev.lastSolvedDate === solvedDate ? prev.streak : maintainsStreak ? prev.streak + 1 : 1) : 0
+      let xp = prev.xp + (correct ? XP_PER_CORRECT[problem.difficulty] : 0)
       let level = prev.level
-      // Level up loop
       while (xp >= XP_TO_LEVEL(level)) { xp -= XP_TO_LEVEL(level); level++ }
       const next: PlayerStats = {
         ...prev,
         level,
         xp,
-        streak: correct ? prev.streak + 1 : 0,
+        streak,
+        bestStreak: Math.max(prev.bestStreak, streak),
         totalAnswered: prev.totalAnswered + 1,
         correct: prev.correct + (correct ? 1 : 0),
-        seenIds: prev.seenIds.includes(problemId)
-          ? prev.seenIds
-          : [...prev.seenIds, problemId],
-        allTimeSeenIds: prev.allTimeSeenIds.includes(problemId)
-          ? prev.allTimeSeenIds
-          : [...prev.allTimeSeenIds, problemId],
+        points: prev.points + (correct ? POINTS_PER_SOLVE[problem.difficulty] : 0),
+        solvedByDifficulty: {
+          ...prev.solvedByDifficulty,
+          [problem.difficulty]: prev.solvedByDifficulty[problem.difficulty] + (correct ? 1 : 0),
+        },
+        solvedByTag: (problem.tags || []).reduce((acc, tag) => {
+          if (!correct) return acc
+          acc[tag] = (acc[tag] || 0) + 1
+          return acc
+        }, { ...prev.solvedByTag } as Record<string, number>),
+        solvedProblems: correct && !prev.solvedProblems.includes(problem.id) ? [...prev.solvedProblems, problem.id] : prev.solvedProblems,
+        solvedHistory: correct ? [{ id: problem.id, difficulty: problem.difficulty, solvedAt: new Date().toISOString(), tags: problem.tags || [] }, ...prev.solvedHistory].slice(0, 100) : prev.solvedHistory,
+        lastSolvedDate: correct ? solvedDate : prev.lastSolvedDate,
+        seenIds: prev.seenIds.includes(problem.id) ? prev.seenIds : [...prev.seenIds, problem.id],
+        allTimeSeenIds: prev.allTimeSeenIds.includes(problem.id) ? prev.allTimeSeenIds : [...prev.allTimeSeenIds, problem.id],
       }
+      next.badges = getBadgeList(next)
       saveStats(storageKey, next)
       return { [key]: next }
     })
@@ -207,9 +229,7 @@ export const useMathStore = create<MathStore>((set, get) => ({
 
   markSeen: (trainer, id) => {
     const key = trainer === 'mathforge' ? 'forgeStats' : 'theoriaStats'
-    set(s => ({
-      [key]: { ...s[key], seenIds: [...s[key].seenIds, id] }
-    }))
+    set(s => ({ [key]: { ...s[key], seenIds: [...s[key].seenIds, id] } }))
   },
 
   resetSeen: (trainer) => {
@@ -223,44 +243,56 @@ export const useMathStore = create<MathStore>((set, get) => ({
   },
 }))
 
-// ── Helpers ───────────────────────────────────────────────────────
 export function getAllProblems(customProblems: MathProblem[]): MathProblem[] {
-  return [...DEFAULT_PROBLEMS, ...customProblems]
+  return [...DEFAULT_PROBLEMS, ...customProblems].map((problem) => ({
+    ...problem,
+    hints: problem.hints?.length ? problem.hints : problem.hint ? [problem.hint] : [],
+    tags: problem.tags?.length ? problem.tags : [problem.category],
+  }))
 }
 
-/** Pick next unseen problem appropriate for player level */
 export function pickNextProblem(
   trainer: TrainerType,
   stats: PlayerStats,
   allProblems: MathProblem[],
-  filterCategory?: Category
+  filterCategory?: Category,
+  selectedTags: string[] = [],
+  search = ''
 ): MathProblem | null {
+  const query = search.trim().toLowerCase()
   const pool = allProblems.filter(p => {
     if (p.type !== trainer) return false
-    if (filterCategory && filterCategory !== 'proof' && p.category !== filterCategory) return false
-    if (filterCategory === 'proof' && p.category !== 'proof') return false
+    if (filterCategory && p.category !== filterCategory) return false
+    if (selectedTags.length > 0 && !selectedTags.every(tag => (p.tags || []).includes(tag))) return false
+    if (query) {
+      const haystack = `${p.title} ${(p.tags || []).join(' ')}`.toLowerCase()
+      if (!haystack.includes(query)) return false
+    }
     return true
   })
-  if (pool.length === 0) return null
+  if (!pool.length) return null
 
   const targetDifficulty = levelToDifficulty(stats.level)
-
-  // Prefer unseen (all-time), fall back to unseen this session, fall back to anything
   const unseen = pool.filter(p => !stats.allTimeSeenIds.includes(p.id))
-  const unseenSession = pool.filter(p => !stats.seenIds.includes(p.id))
-  const candidates = unseen.length > 0 ? unseen : (unseenSession.length > 0 ? unseenSession : pool)
-
-  // Within candidates, prefer matching difficulty
+  const candidates = unseen.length > 0 ? unseen : pool
   const byDiff = candidates.filter(p => p.difficulty === targetDifficulty)
   const finalPool = byDiff.length > 0 ? byDiff : candidates
-
   return finalPool[Math.floor(Math.random() * finalPool.length)]
+}
+
+export function recommendProblems(allProblems: MathProblem[], solvedProblems: string[], targetDifficulty: Difficulty, limit = 4): MathProblem[] {
+  const solvedSet = new Set(solvedProblems)
+  return allProblems
+    .filter(p => !solvedSet.has(p.id))
+    .sort((a, b) => Number(b.difficulty === targetDifficulty) - Number(a.difficulty === targetDifficulty))
+    .slice(0, limit)
 }
 
 export function levelToDifficulty(level: number): Difficulty {
   if (level <= 3) return 'easy'
   if (level <= 7) return 'medium'
-  return 'hard'
+  if (level <= 12) return 'hard'
+  return 'olympiad'
 }
 
 export function accuracy(stats: PlayerStats): number {

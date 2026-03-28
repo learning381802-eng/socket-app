@@ -45,6 +45,21 @@ CREATE TABLE IF NOT EXISTS public.memberships (
   UNIQUE (user_id, conversation_id)
 );
 
+-- Chat invites (email-based pre-signup invite flow)
+CREATE TABLE IF NOT EXISTS public.chat_invites (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  invited_email TEXT NOT NULL,
+  invited_by    UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  inviter_name  TEXT,
+  status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  accepted_by   UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  accepted_at   TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_invites_email_status
+  ON public.chat_invites(invited_email, status);
+
 -- Messages
 CREATE TABLE IF NOT EXISTS public.messages (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -168,6 +183,7 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_invites ENABLE ROW LEVEL SECURITY;
 
 -- Users: anyone can read profiles, only owner can update
 CREATE POLICY "Users are viewable by authenticated users"
@@ -218,6 +234,22 @@ CREATE POLICY "Authenticated users can create memberships"
 CREATE POLICY "Users can leave conversations"
   ON public.memberships FOR DELETE TO authenticated
   USING (user_id = auth.uid());
+
+-- Chat invites policies
+CREATE POLICY "Users can create invites"
+  ON public.chat_invites FOR INSERT TO authenticated
+  WITH CHECK (invited_by = auth.uid());
+
+CREATE POLICY "Users can view invites sent to their email"
+  ON public.chat_invites FOR SELECT TO authenticated
+  USING (
+    lower(invited_email) = lower(auth.email()) OR invited_by = auth.uid()
+  );
+
+CREATE POLICY "Invite recipients can update invite status"
+  ON public.chat_invites FOR UPDATE TO authenticated
+  USING (lower(invited_email) = lower(auth.email()))
+  WITH CHECK (lower(invited_email) = lower(auth.email()));
 
 -- Messages: only members of a conversation can see/send messages
 -- SELECT: Members can view messages in their conversations
@@ -304,4 +336,32 @@ BEGIN
      OR u.email ILIKE '%' || search_query || '%'
   LIMIT 10;
 END;
+$$;
+
+-- Advanced math platform extensions
+create table if not exists public.problem_solves (
+  id bigserial primary key,
+  user_id uuid not null,
+  problem_id text not null,
+  difficulty text not null,
+  tags text[] default '{}',
+  solved_at timestamptz not null default now()
+);
+
+create table if not exists public.message_reads (
+  conversation_id uuid not null,
+  user_id uuid not null,
+  read_at timestamptz not null default now(),
+  primary key (conversation_id, user_id)
+);
+
+-- Optional RPC used by frontend for points; safe no-op if not granted
+create or replace function public.increment_user_points(p_user_id uuid, p_difficulty text)
+returns void
+language plpgsql
+as $$
+begin
+  -- placeholder to be wired to your user stats table.
+  return;
+end;
 $$;

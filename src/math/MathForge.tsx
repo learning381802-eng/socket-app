@@ -1,21 +1,25 @@
-// MathForge.tsx — Problem trainer (self-contained, no TrainerCard)
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import MathRenderer from './MathRenderer'
 import {
-  useMathStore, pickNextProblem, getAllProblems, accuracy,
-  levelToDifficulty, MathProblem, Category,
+  useMathStore,
+  pickNextProblem,
+  getAllProblems,
+  accuracy,
+  levelToDifficulty,
+  MathProblem,
+  Category,
+  recommendProblems,
 } from './mathStore'
-
-const DIFF_COLOR = { easy: '#2d6a4f', medium: '#b5761a', hard: '#9b2226' }
-const DIFF_BG    = { easy: '#d8f3dc', medium: '#fff3cd', hard: '#fde8e8' }
-const XP_NEEDED  = (lvl: number) => lvl * 100
+import { useStore } from '../store'
+import { trackProblemSolve } from '../lib/supabase'
 
 const CATS: { id: Category | 'all'; label: string; icon: string }[] = [
-  { id: 'all',      label: 'All',      icon: '∞'  },
-  { id: 'algebra',  label: 'Algebra',  icon: 'x²' },
-  { id: 'geometry', label: 'Geometry', icon: '△'  },
-  { id: 'calculus', label: 'Calculus', icon: '∫'  },
+  { id: 'all', label: 'All', icon: '∞' },
+  { id: 'algebra', label: 'Algebra', icon: 'x²' },
+  { id: 'geometry', label: 'Geometry', icon: '△' },
+  { id: 'calculus', label: 'Calculus', icon: '∫' },
+  { id: 'number-theory', label: 'Number Theory', icon: 'ℤ' },
 ]
 
 function normalise(s: string) {
@@ -23,225 +27,161 @@ function normalise(s: string) {
 }
 
 export default function MathForge() {
+  const { user } = useStore()
   const { customProblems, recordAnswer, markSeen, resetSeen } = useMathStore()
-  const forgeStats = useMathStore(s => s.forgeStats) // Reactive subscription
+  const forgeStats = useMathStore(s => s.forgeStats)
   const [cat, setCat] = useState<Category | 'all'>('all')
+  const [search, setSearch] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
-  const allProblems = getAllProblems(customProblems)
+  const allProblems = useMemo(() => getAllProblems(customProblems), [customProblems])
+  const forgeProblems = allProblems.filter(p => p.type === 'mathforge')
+  const allTags = useMemo(() => Array.from(new Set(forgeProblems.flatMap(p => p.tags || []))).slice(0, 10), [forgeProblems])
   const filterCat = cat === 'all' ? undefined : cat
 
   const [current, setCurrent] = useState<MathProblem | null>(() =>
-    pickNextProblem('mathforge', forgeStats, allProblems, filterCat)
+    pickNextProblem('mathforge', forgeStats, allProblems, filterCat, selectedTags, search)
   )
-  const [answer, setAnswer]       = useState('')
+  const [answer, setAnswer] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
-  const [showHint, setShowHint]   = useState(false)
-  const [showExpl, setShowExpl]   = useState(false)
-  const [shake, setShake]         = useState(false)
-  const [levelUp, setLevelUp]     = useState<number | null>(null)
-  const [noMore, setNoMore]       = useState(!current)
+  const [revealed, setRevealed] = useState(false)
+  const [revealedHintCount, setRevealedHintCount] = useState(0)
 
-  // Re-pick when category changes
-  const handleCat = (c: Category | 'all') => {
-    setCat(c)
-    const fc = c === 'all' ? undefined : c
-    const p = pickNextProblem('mathforge', useMathStore.getState().forgeStats, getAllProblems(useMathStore.getState().customProblems), fc)
+  const recommendations = recommendProblems(allProblems.filter(p => p.type === 'mathforge'), forgeStats.solvedProblems, levelToDifficulty(forgeStats.level), 3)
+
+  const pick = useCallback(() => {
+    const s = useMathStore.getState()
+    const fc = cat === 'all' ? undefined : cat
+    const next = pickNextProblem('mathforge', s.forgeStats, getAllProblems(s.customProblems), fc, selectedTags, search)
+    setCurrent(next)
+    setAnswer('')
+    setSubmitted(false)
+    setIsCorrect(false)
+    setRevealed(false)
+    setRevealedHintCount(0)
+  }, [cat, selectedTags, search])
+
+  const onFiltersChanged = (nextCat: Category | 'all', nextTags = selectedTags, nextSearch = search) => {
+    setCat(nextCat)
+    const p = pickNextProblem('mathforge', useMathStore.getState().forgeStats, getAllProblems(useMathStore.getState().customProblems), nextCat === 'all' ? undefined : nextCat, nextTags, nextSearch)
     setCurrent(p)
-    setAnswer(''); setSubmitted(false); setIsCorrect(false)
-    setShowHint(false); setShowExpl(false)
-    setNoMore(!p)
+    setAnswer('')
+    setSubmitted(false)
+    setIsCorrect(false)
+    setRevealed(false)
+    setRevealedHintCount(0)
   }
 
-  const advance = useCallback(() => {
-    const s = useMathStore.getState()
-    const fc = cat === 'all' ? undefined : (cat as Category)
-    const next = pickNextProblem('mathforge', s.forgeStats, getAllProblems(s.customProblems), fc)
-    setAnswer(''); setSubmitted(false); setIsCorrect(false)
-    setShowHint(false); setShowExpl(false)
-    if (!next) { setNoMore(true); return }
-    setNoMore(false); setCurrent(next)
-  }, [cat])
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!current || submitted || !answer.trim()) return
     markSeen('mathforge', current.id)
-    const prevLvl = useMathStore.getState().forgeStats.level
     const correct = current.answer ? normalise(answer) === normalise(current.answer) : true
-    recordAnswer('mathforge', current.id, correct, current.difficulty)
-    setIsCorrect(correct); setSubmitted(true)
-    if (!correct) { setShake(true); setTimeout(() => setShake(false), 500) }
-    else {
-      const newLvl = useMathStore.getState().forgeStats.level
-      if (newLvl > prevLvl) { setLevelUp(newLvl); setTimeout(() => setLevelUp(null), 2800) }
+    recordAnswer('mathforge', current, correct)
+    if (correct && user?.id) {
+      await trackProblemSolve(user.id, current.id, current.difficulty, current.tags || [])
     }
+    setIsCorrect(correct)
+    setSubmitted(true)
   }
-
-  const stats   = useMathStore(s => s.forgeStats)
-  const acc     = accuracy(stats)
-  const xpNeeded = XP_NEEDED(stats.level)
-  const xpPct   = Math.min(100, Math.round((stats.xp / xpNeeded) * 100))
-  const diff    = levelToDifficulty(stats.level)
-  const unseenCount = allProblems
-    .filter(p => p.type === 'mathforge' && !stats.allTimeSeenIds.includes(p.id)).length
 
   return (
     <div className="trainer-wrap">
-      {/* Header */}
       <div className="trainer-header forge-header">
         <div className="trainer-brand">
           <span className="trainer-icon forge-icon-char">⚒</span>
           <div>
             <h2 className="trainer-name">MathForge</h2>
-            <p className="trainer-tagline">Solve problems · earn XP · level up</p>
+            <p className="trainer-tagline">Try first mode + hints + step-by-step reveal</p>
           </div>
         </div>
         <div className="trainer-stats-row">
-          <StatPill label="Level"    value={`${stats.level}`}  accent="#2d6a4f" />
-          <StatPill label="Streak"   value={`${stats.streak}🔥`} accent="#b5761a" />
-          <StatPill label="Accuracy" value={`${acc}%`}         accent="#185fa5" />
-          <StatPill label="Solved"   value={`${stats.correct}`} accent="#6173f3" />
+          <StatPill label="Level" value={`${forgeStats.level}`} accent="#2d6a4f" />
+          <StatPill label="Accuracy" value={`${accuracy(forgeStats)}%`} accent="#185fa5" />
+          <StatPill label="Points" value={`${forgeStats.points}`} accent="#6b3fa0" />
         </div>
       </div>
 
-      {/* XP bar */}
-      <div className="xp-bar-wrap">
-        <div className="xp-bar-track">
-          <motion.div className="xp-bar-fill forge-xp" style={{ width: `${xpPct}%` }} layout />
+      <div className="problem-filters">
+        <input className="problem-search" value={search} onChange={(e) => { setSearch(e.target.value); onFiltersChanged(cat, selectedTags, e.target.value) }} placeholder="Search problems by title or tags" />
+        <div className="category-pills">
+          {CATS.map(c => (
+            <button key={c.id} onClick={() => onFiltersChanged(c.id)} className={`category-pill ${cat === c.id ? 'active' : ''}`}>
+              <span className="category-icon">{c.icon}</span>{c.label}
+            </button>
+          ))}
         </div>
-        <span className="xp-label">
-          {stats.xp} / {xpNeeded} XP · targeting <strong>{diff}</strong> problems
-          · <span style={{ color: '#888' }}>{unseenCount} unseen</span>
-        </span>
+        <div className="tag-filter-row">
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              className={`category-pill ${selectedTags.includes(tag) ? 'active' : ''}`}
+              onClick={() => {
+                const next = selectedTags.includes(tag) ? selectedTags.filter((t) => t !== tag) : [...selectedTags, tag]
+                setSelectedTags(next)
+                onFiltersChanged(cat, next)
+              }}
+            >#{tag}</button>
+          ))}
+        </div>
       </div>
 
-      {/* Category filter */}
-      <div className="category-pills" style={{ marginBottom: 24 }}>
-        {CATS.map(c => (
-          <button key={c.id} onClick={() => handleCat(c.id)}
-            className={`category-pill ${cat === c.id ? 'active' : ''}`}>
-            <span className="category-icon">{c.icon}</span>{c.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Level-up toast */}
-      <AnimatePresence>
-        {levelUp && (
-          <motion.div className="levelup-toast forge-toast"
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}>
-            🎉 Level {levelUp}! Harder problems unlocked.
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* No more state */}
-      {noMore ? (
-        <div className="trainer-empty">
-          <p className="trainer-empty-icon">⚒</p>
-          <h3>You've seen every problem!</h3>
-          <p>More will appear as new problems are added. Reset to replay.</p>
-          <button className="trainer-next-btn" onClick={() => { resetSeen('mathforge'); advance() }}>
-            ↺ Reset &amp; Start Over
-          </button>
-        </div>
-      ) : !current ? (
-        <div className="trainer-empty">
-          <p className="trainer-empty-icon">⚒</p>
-          <h3>No problems yet in this category</h3>
-          <p>Switch category or ask the admin to add problems.</p>
-        </div>
+      {!current ? (
+        <div className="trainer-empty"><h3>No problem matches these filters.</h3><button className="trainer-next-btn" onClick={() => { resetSeen('mathforge'); pick() }}>Reset</button></div>
       ) : (
         <AnimatePresence mode="wait">
-          <motion.div key={current.id}
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.22 }}
-            className="problem-card">
-
-            {/* Card header */}
-            <div className="pc-header">
-              <div className="pc-meta">
-                <span className="math-category-badge" style={{ textTransform: 'capitalize' }}>
-                  {current.category}
-                </span>
-                <span className="math-difficulty-badge"
-                  style={{ color: DIFF_COLOR[current.difficulty], background: DIFF_BG[current.difficulty] }}>
-                  {current.difficulty}
-                </span>
-              </div>
+          <motion.div key={current.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="problem-card">
+            <div className="pc-meta">
+              <span className="math-category-badge" style={{ textTransform: 'capitalize' }}>{current.category}</span>
+              <span className="math-difficulty-badge">{current.difficulty}</span>
+              {(current.tags || []).map(tag => <span className="math-category-badge" key={tag}>#{tag}</span>)}
             </div>
-
             <h3 className="pc-title">{current.title}</h3>
+            <div className="pc-problem-display"><MathRenderer math={current.problem} block /></div>
 
-            <div className="pc-problem-display">
-              <MathRenderer math={current.problem} block />
+            <div className="try-first-box">
+              <strong>Try First Mode</strong>
+              <p>Work the problem yourself before revealing hints or the full solution.</p>
             </div>
 
-            {/* Hint */}
-            {current.hint && (
+            {!!current.hints?.length && (
               <div className="math-hint-section">
-                <button className="math-hint-btn" onClick={() => setShowHint(!showHint)}>
-                  {showHint ? '▼ Hide hint' : '▶ Show hint'}
-                </button>
-                {showHint && <p className="math-hint-text">{current.hint}</p>}
+                <button className="math-hint-btn" onClick={() => setRevealedHintCount((h) => Math.min((current.hints || []).length, h + 1))}>Reveal next hint</button>
+                {(current.hints || []).slice(0, revealedHintCount).map((hint, i) => (
+                  <p key={i} className="math-hint-text">Hint {i + 1}: {hint}</p>
+                ))}
               </div>
             )}
 
-            {/* Answer input */}
             {!submitted ? (
-              <form onSubmit={handleSubmit}>
-                <div className={`submission-inner ${shake ? 'submission-shake' : ''}`}
-                  style={{ borderColor: '#dde8de' }}>
-                  <input type="text" value={answer}
-                    onChange={e => setAnswer(e.target.value)}
-                    placeholder="Enter your answer..."
-                    className="submission-input" autoComplete="off" />
-                  <button type="submit" className="submission-check-btn"
-                    style={{ background: '#1a472a' }}>
-                    Check
-                  </button>
-                </div>
-              </form>
+              <form onSubmit={handleSubmit}><div className="submission-inner"><input value={answer} onChange={e => setAnswer(e.target.value)} className="submission-input" placeholder="Enter your answer" /><button type="submit" className="submission-check-btn">Check</button></div></form>
             ) : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className={`pc-result-banner ${isCorrect ? 'correct' : 'incorrect'}`}>
-                <span style={{ fontSize: 18, marginRight: 8 }}>{isCorrect ? '✓' : '✕'}</span>
-                {isCorrect
-                  ? `Correct! +${current.difficulty === 'easy' ? 10 : current.difficulty === 'medium' ? 20 : 35} XP`
-                  : `Not quite — answer: ${current.answer}`}
-                {current.explanation && (
-                  <div style={{ marginTop: 8 }}>
-                    <button className="math-hint-btn" style={{ color: isCorrect ? '#2d6a4f' : '#9b2226' }}
-                      onClick={() => setShowExpl(!showExpl)}>
-                      {showExpl ? '▼ Hide explanation' : '▶ Show explanation'}
-                    </button>
-                    {showExpl && <p className="math-hint-text" style={{ marginTop: 6 }}>{current.explanation}</p>}
-                  </div>
-                )}
-              </motion.div>
+              <div className={`pc-result-banner ${isCorrect ? 'correct' : 'incorrect'}`}>
+                {isCorrect ? 'Correct!' : `Not quite. Expected: ${current.answer || 'See solution below'}`}
+              </div>
             )}
 
-            {submitted && (
-              <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                onClick={advance} className="trainer-next-btn">
-                Next Problem →
-              </motion.button>
-            )}
+            <button className="trainer-next-btn" onClick={() => setRevealed(v => !v)}>{revealed ? 'Hide Step-by-Step Solution' : 'Reveal Step-by-Step Solution'}</button>
+            {revealed && current.explanation && <div className="model-proof"><p className="model-proof-text">{current.explanation}</p></div>}
+
+            {submitted && <button onClick={pick} className="trainer-next-btn">Next Problem →</button>}
           </motion.div>
         </AnimatePresence>
       )}
+
+      <div className="recommendation-card">
+        <h4>Recommended for you</h4>
+        {recommendations.map((p) => (
+          <button key={p.id} className="rec-row" onClick={() => { setCurrent(p); setSubmitted(false); setAnswer(''); setRevealed(false); setRevealedHintCount(0) }}>
+            <span>{p.title}</span><span>{p.difficulty}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
 
 function StatPill({ label, value, accent }: { label: string; value: string; accent: string }) {
-  return (
-    <div className="stat-pill" style={{ borderColor: accent + '40' }}>
-      <span className="stat-pill-label">{label}</span>
-      <span className="stat-pill-value" style={{ color: accent }}>{value}</span>
-    </div>
-  )
+  return <div className="stat-pill" style={{ borderColor: accent + '40' }}><span className="stat-pill-label">{label}</span><span className="stat-pill-value" style={{ color: accent }}>{value}</span></div>
 }

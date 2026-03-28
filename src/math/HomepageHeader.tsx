@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/supabase'
 
 export default function HomepageHeader() {
-  const { user } = useStore()
+  const { user, theme, toggleTheme } = useStore()
   const navigate = useNavigate()
   const [showLogin, setShowLogin] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -31,6 +31,7 @@ export default function HomepageHeader() {
           <nav className="math-nav">
             <a href="#trainers">Trainers</a>
             <a href="#about">About</a>
+            <button className="math-nav-theme" onClick={toggleTheme}>{theme === 'dark' ? '☀ Light' : '🌙 Dark'}</button>
           </nav>
 
           <div className="math-header-auth">
@@ -57,12 +58,8 @@ export default function HomepageHeader() {
                         transition={{ duration: 0.15 }}
                       >
                         <div className="math-dropdown-email">{user.email}</div>
-                        <button
-                          className="math-dropdown-item"
-                          onClick={() => { navigate('/profile'); setShowUserMenu(false) }}
-                        >
-                          View Profile
-                        </button>
+                        <button className="math-dropdown-item" onClick={() => { navigate('/profile'); setShowUserMenu(false) }}>View Profile</button>
+                        <button className="math-dropdown-item" onClick={() => { navigate('/leaderboard'); setShowUserMenu(false) }}>Leaderboard</button>
                 <div className="math-dropdown-divider" />
                         <button
                           className="math-dropdown-item math-dropdown-signout"

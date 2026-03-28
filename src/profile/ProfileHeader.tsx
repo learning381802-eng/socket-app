@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
-import { sessionGate } from '../stealth/sessionGate'
 
 interface Props {
   onEditProfile: () => void
@@ -27,11 +26,6 @@ export default function ProfileHeader({ onEditProfile }: Props) {
   const joinedDate = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : 'Recently'
-
-  const handleOpenChat = () => {
-    sessionGate.authorize()
-    navigate('/socket')
-  }
 
   const handleFindPeople = () => {
     navigate('/discover')
@@ -126,16 +120,9 @@ export default function ProfileHeader({ onEditProfile }: Props) {
             Find People
           </motion.button>
 
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            className="ph-btn ph-btn-ghost"
-            onClick={handleOpenChat}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-            </svg>
-            Messages
-          </motion.button>
+          <span className="ph-btn ph-btn-ghost" style={{ pointerEvents: 'none', opacity: 0.8 }}>
+            Hidden chat is only unlocked from the “everyone” trigger on homepage.
+          </span>
         </div>
       </div>
     </div>
