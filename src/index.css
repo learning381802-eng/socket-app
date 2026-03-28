@@ -7334,3 +7334,16 @@ input, textarea, select { border-radius: 12px; }
 }
 
 /* Message Composer placeholder - actual composer needs separate styling */
+
+/* Advanced math UX */
+.problem-filters { display: grid; gap: 10px; margin-bottom: 16px; }
+.problem-search { width: 100%; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); border-radius: 12px; padding: 10px 12px; }
+.tag-filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.try-first-box { background: var(--bg-secondary); border: 1px dashed var(--border); border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
+.recommendation-card { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-secondary); }
+.rec-row { display: flex; width: 100%; justify-content: space-between; border: 1px solid var(--border); margin-top: 8px; border-radius: 10px; padding: 8px 10px; background: var(--bg-primary); }
+.math-nav-theme { border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+
+/* Premium transitions */
+.problem-card, .pp-card, .trainer-select-card, .sidebar-footer-btn, .sidebar-new-chat-btn { transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease; }
+.problem-card:hover, .trainer-select-card:hover, .pp-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.12); }

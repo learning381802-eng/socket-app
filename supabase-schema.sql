@@ -337,3 +337,31 @@ BEGIN
   LIMIT 10;
 END;
 $$;
+
+-- Advanced math platform extensions
+create table if not exists public.problem_solves (
+  id bigserial primary key,
+  user_id uuid not null,
+  problem_id text not null,
+  difficulty text not null,
+  tags text[] default '{}',
+  solved_at timestamptz not null default now()
+);
+
+create table if not exists public.message_reads (
+  conversation_id uuid not null,
+  user_id uuid not null,
+  read_at timestamptz not null default now(),
+  primary key (conversation_id, user_id)
+);
+
+-- Optional RPC used by frontend for points; safe no-op if not granted
+create or replace function public.increment_user_points(p_user_id uuid, p_difficulty text)
+returns void
+language plpgsql
+as $$
+begin
+  -- placeholder to be wired to your user stats table.
+  return;
+end;
+$$;

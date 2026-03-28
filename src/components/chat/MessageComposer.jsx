@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import EmojiPicker from 'emoji-picker-react'
 import { useStore } from '../../store'
-import { sendMessage, uploadFile, supabase } from '../../lib/supabase'
+import { sendMessage, uploadFile, subscribeToTyping, supabase } from '../../lib/supabase'
 
 export default function MessageComposer({ conversationId, placeholder = 'Message' }) {
   const { user, addOptimisticMessage, confirmMessage, addNotification, setTypingUser, setModal } = useStore()
@@ -20,6 +20,7 @@ export default function MessageComposer({ conversationId, placeholder = 'Message
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const typingTimeout = useRef(null)
+  const typingChannelRef = useRef(null)
 
   // Auto-resize textarea
   useEffect(() => {
@@ -29,11 +30,17 @@ export default function MessageComposer({ conversationId, placeholder = 'Message
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'
   }, [content])
 
+
+  useEffect(() => {
+    if (!conversationId) return
+    typingChannelRef.current?.unsubscribe?.()
+    typingChannelRef.current = subscribeToTyping(conversationId, () => {})
+    return () => typingChannelRef.current?.unsubscribe?.()
+  }, [conversationId])
   // Typing indicator
   const handleTyping = useCallback(() => {
     if (!conversationId || !user) return
-    const channel = supabase.channel(`typing:${conversationId}`)
-    channel.send({ type: 'broadcast', event: 'typing', payload: { user_id: user.id } })
+    typingChannelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { user_id: user.id } })
 
     clearTimeout(typingTimeout.current)
     typingTimeout.current = setTimeout(() => {

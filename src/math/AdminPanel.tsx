@@ -24,6 +24,8 @@ export default function AdminPanel({ userEmail }: Props) {
     category:    'algebra' as Category,
     difficulty:  'easy' as Difficulty,
     hint:        '',
+    hints:       '',
+    tags:        '',
     answer:      '',
     explanation: '',
   })
@@ -44,11 +46,13 @@ export default function AdminPanel({ userEmail }: Props) {
       category: isProof ? 'proof' : form.category,
       difficulty: form.difficulty,
       hint:        form.hint        || undefined,
+      hints:       form.hints ? form.hints.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      tags:        form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
       answer:      form.answer      || undefined,
       explanation: form.explanation || undefined,
     })
     setForm({ type: 'mathforge', title: '', problem: '', category: 'algebra',
-              difficulty: 'easy', hint: '', answer: '', explanation: '' })
+              difficulty: 'easy', hint: '', hints: '', tags: '', answer: '', explanation: '' })
     setFormMsg('✓ Problem added!')
     setTimeout(() => setFormMsg(''), 3000)
   }
@@ -137,6 +141,7 @@ export default function AdminPanel({ userEmail }: Props) {
                       <option value="easy">Easy</option>
                       <option value="medium">Medium</option>
                       <option value="hard">Hard</option>
+                      <option value="olympiad">Olympiad</option>
                     </select>
                   </div>
                 </div>
@@ -161,6 +166,18 @@ export default function AdminPanel({ userEmail }: Props) {
                   <label>Hint (optional)</label>
                   <input value={form.hint} onChange={e => setF('hint', e.target.value)}
                     placeholder="A helpful nudge..." className="admin-input admin-input-wide" />
+                </div>
+
+                <div className="admin-field">
+                  <label>Hints (comma separated, optional)</label>
+                  <input value={form.hints} onChange={e => setF('hints', e.target.value)}
+                    placeholder="Try substitution, Isolate x first" className="admin-input admin-input-wide" />
+                </div>
+
+                <div className="admin-field">
+                  <label>Tags (comma separated)</label>
+                  <input value={form.tags} onChange={e => setF('tags', e.target.value)}
+                    placeholder="algebra, amc-level" className="admin-input admin-input-wide" />
                 </div>
 
                 <div className="admin-field">

@@ -8,6 +8,7 @@ import { ModuleCore, StreamAuth } from './stealth/lazyLoader'
 import NotificationStack from './components/ui/NotificationStack'
 import ProfilePage from './profile/ProfilePage'
 import DiscoverPage from './pages/DiscoverPage'
+import Leaderboard from './pages/Leaderboard'
 
 function ChatLoader() {
   return (
@@ -69,6 +70,7 @@ export default function App() {
 
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/discover" element={<DiscoverPage />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

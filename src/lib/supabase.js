@@ -209,3 +209,61 @@ export const subscribeToPresence = (channelName, userId, onSync) => {
     })
   return channel
 }
+
+// Math problem helpers (graceful fallback if tables are not deployed yet)
+export const searchProblems = async (query, tags = []) => {
+  const safeQuery = String(query || '').trim()
+  let req = supabase.from('problems').select('*').limit(30)
+  if (safeQuery) req = req.ilike('title', `%${safeQuery}%`)
+  if (tags.length) req = req.contains('tags', tags)
+  const { data, error } = await req
+  return { data: data || [], error }
+}
+
+export const getRecommendedProblems = async (userId, difficulty) => {
+  const { data, error } = await supabase
+    .from('problem_recommendations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('difficulty', difficulty)
+    .limit(10)
+  return { data: data || [], error }
+}
+
+export const trackProblemSolve = async (userId, problemId, difficulty, tags = []) => {
+  try {
+    await supabase.from('problem_solves').insert({ user_id: userId, problem_id: problemId, difficulty, tags })
+    await supabase.rpc('increment_user_points', { p_user_id: userId, p_difficulty: difficulty })
+  } catch (error) {
+    // Non-blocking tracking to avoid breaking UX if backend migrations are pending
+    return { error }
+  }
+  return { error: null }
+}
+
+// Read receipts + typing status for chat realism
+export const markMessagesRead = async (conversationId, userId) => {
+  const { error } = await supabase
+    .from('message_reads')
+    .upsert({ conversation_id: conversationId, user_id: userId, read_at: new Date().toISOString() }, { onConflict: 'conversation_id,user_id' })
+  return { error }
+}
+
+export const subscribeToReadReceipts = (conversationId, callback) => {
+  return supabase
+    .channel(`reads:${conversationId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'message_reads',
+      filter: `conversation_id=eq.${conversationId}`,
+    }, callback)
+    .subscribe()
+}
+
+export const subscribeToTyping = (conversationId, callback) => {
+  const channel = supabase.channel(`typing:${conversationId}`)
+  channel.on('broadcast', { event: 'typing' }, callback)
+  channel.subscribe()
+  return channel
+}

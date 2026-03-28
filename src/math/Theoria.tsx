@@ -52,7 +52,7 @@ export default function Theoria() {
   const handleSelfScore = (score: 'correct' | 'partial' | 'incorrect') => {
     setSelfScore(score)
     const prevLvl = useMathStore.getState().theoriaStats.level
-    recordAnswer('theoria', current!.id, score === 'correct', current!.difficulty)
+    recordAnswer('theoria', current!, score === 'correct')
     const newLvl = useMathStore.getState().theoriaStats.level
     if (newLvl > prevLvl) { setLevelUp(newLvl); setTimeout(() => setLevelUp(null), 2800) }
   }
@@ -158,12 +158,12 @@ export default function Theoria() {
             </div>
 
             {/* Hint */}
-            {current.hint && (
+            {!!current.hints?.length && (
               <div className="math-hint-section">
                 <button className="math-hint-btn" onClick={() => setShowHint(!showHint)}>
-                  {showHint ? '▼ Hide hint' : '▶ Show hint'}
+                  {showHint ? '▼ Hide hints' : '▶ Show hints'}
                 </button>
-                {showHint && <p className="math-hint-text">{current.hint}</p>}
+                {showHint && current.hints?.map((hint, idx) => <p key={idx} className="math-hint-text">Hint {idx + 1}: {hint}</p>)}
               </div>
             )}
 
